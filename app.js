@@ -4,6 +4,7 @@
 
 const CS_KEY = 'callsheet.app.v2';
 const CS_KEY_V1 = 'callsheet.app.v1';
+const INTAKE_WIDTH_KEY = 'callsheet.intakeWidth';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const MULTILINE_META_KEYS = new Set([
   'company',
@@ -278,6 +279,51 @@ function save() {
   }, 250);
 }
 function setStatus(t) { const el = document.getElementById('saveStatus'); if (el) el.textContent = t; }
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function setIntakeWidth(width, persist = true) {
+  const px = Math.round(clamp(width, 200, 520));
+  document.documentElement.style.setProperty('--intake-w', `${px}px`);
+  if (persist) {
+    try { localStorage.setItem(INTAKE_WIDTH_KEY, String(px)); } catch {}
+  }
+}
+
+function initIntakeResize() {
+  const resizer = document.getElementById('intakeResizer');
+  const sidebar = document.getElementById('intakeSidebar');
+  if (!resizer || !sidebar) return;
+
+  try {
+    const stored = Number(localStorage.getItem(INTAKE_WIDTH_KEY));
+    if (stored) setIntakeWidth(stored, false);
+  } catch {}
+
+  let startX = 0;
+  let startW = 0;
+
+  const onMove = e => {
+    setIntakeWidth(startW + (e.clientX - startX));
+  };
+  const onUp = () => {
+    document.body.classList.remove('resizing-intake');
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+  };
+
+  resizer.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = sidebar.getBoundingClientRect().width;
+    document.body.classList.add('resizing-intake');
+    resizer.setPointerCapture?.(e.pointerId);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  });
+}
 
 // ---- utilities ----
 const esc = s => (s == null ? '' : String(s))
@@ -1723,18 +1769,7 @@ function initChrome() {
   if (bA4) bA4.addEventListener('click', () => { store.tweaks.paperSize = 'a4'; save(); applyTweaks(); });
   if (bLetter) bLetter.addEventListener('click', () => { store.tweaks.paperSize = 'letter'; save(); applyTweaks(); });
 
-  // section spacing slider
-  const gapSlider = document.getElementById('gapSlider');
-  const gapVal = document.getElementById('gapVal');
-  if (gapSlider) {
-    const applyGap = () => {
-      const v = gapSlider.value;
-      document.getElementById('sectionsHost').style.setProperty('--section-gap', v + 'mm');
-      document.documentElement.style.setProperty('--section-gap', v + 'mm');
-      if (gapVal) gapVal.textContent = v + 'mm';
-    };
-    gapSlider.addEventListener('input', applyGap);
-  }
+  initIntakeResize();
 }
 
 // ---- BOOT ----

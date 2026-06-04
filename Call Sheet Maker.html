@@ -31,6 +31,8 @@
     --fs-cell: 10.5px;
     --fs-label: 8.5px;
     --fs-h: 9.5px;
+    --intake-w: 280px;
+    --section-gap: 0mm;
   }
 
   * { box-sizing: border-box; }
@@ -46,8 +48,8 @@
   /* ──────────────── app chrome ──────────────── */
   .appbar {
     position: sticky; top: 0; z-index: 40;
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 16px;
+    display: flex; align-items: center; gap: 0;
+    padding: 8px 16px 8px 0;
     background: color-mix(in oklch, var(--bg) 90%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--rule-2);
@@ -63,14 +65,37 @@
     overflow: hidden;
   }
   .intake-sidebar {
-    width: 280px;
+    width: var(--intake-w);
     min-width: 200px;
+    max-width: 520px;
     flex-shrink: 0;
     border-right: 1px solid var(--rule);
     overflow-y: auto;
     background: var(--bg);
     display: flex;
     flex-direction: column;
+  }
+  .intake-resizer {
+    flex: 0 0 8px;
+    align-self: stretch;
+    margin-left: -4px;
+    margin-right: -4px;
+    cursor: col-resize;
+    z-index: 20;
+    background: rgba(0,0,0,0.001);
+    position: relative;
+  }
+  .intake-resizer::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 3px;
+    width: 2px;
+    background: transparent;
+    transition: background .12s;
+  }
+  .intake-resizer:hover::after,
+  body.resizing-intake .intake-resizer::after {
+    background: var(--accent);
   }
   .intake-sidebar-hd {
     padding: 10px 14px 8px;
@@ -101,6 +126,13 @@
     font-weight: 600; letter-spacing: -0.01em;
     display: flex; align-items: baseline; gap: 10px;
   }
+  .appbar-left {
+    width: var(--intake-w);
+    flex: 0 0 var(--intake-w);
+    min-width: 200px;
+    max-width: 520px;
+    padding-left: 16px;
+  }
   .appbar .brand .sub { color: var(--ink-3); font-weight: 400; font-size: 11px; }
   .appbar .spacer { flex: 1; }
   .appbar button, .appbar select {
@@ -112,12 +144,14 @@
     cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
   }
+  .appbar button { margin-left: 8px; }
+  .day-switcher button { margin-left: 0; }
   .appbar button:hover { border-color: var(--ink-3); color: var(--ink); }
   .appbar button.primary {
     background: var(--ink); color: var(--paper); border-color: var(--ink);
   }
   .appbar button.primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
-  .appbar .status { font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; display: inline-block; min-width: 54px; }
+  .appbar .status { font-size: 11px; color: var(--ink-4); font-variant-numeric: tabular-nums; display: inline-block; width: 92px; white-space: nowrap; }
 
   .tabs { display: inline-flex; gap: 2px; background: var(--rule-2); padding: 2px; border-radius: 7px; }
   .tabs [data-tab] {
@@ -350,7 +384,7 @@
   .hd2 .sun .k { color: var(--ink-3); font-weight: 500; }
 
   /* ──────────────── SECTIONS ──────────────── */
-  #sectionsHost { margin-top: 8mm; display: flex; flex-direction: column; gap: var(--section-gap, 4mm); }
+  #sectionsHost { margin-top: 8mm; display: flex; flex-direction: column; gap: var(--section-gap); }
 
   .section {
     break-inside: avoid;
@@ -454,28 +488,6 @@
   .row-controls button:hover { color: var(--accent); background: var(--accent-soft); }
   .drag-handle { cursor: grab !important; font-size: 13px !important; letter-spacing: -1px; }
 
-  /* ──────────────── SECTION SPACING SLIDER ──────────────── */
-  .gap-control {
-    position: fixed; right: 14px; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    z-index: 30;
-    background: var(--paper); border: 1px solid var(--rule);
-    border-radius: 8px; padding: 10px 7px 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,.09);
-    font-size: 9px; color: var(--ink-4); letter-spacing: 0.08em; text-transform: uppercase;
-    user-select: none;
-  }
-  .gap-control label { writing-mode: vertical-lr; transform: rotate(180deg); font-size: 8px; letter-spacing: 0.1em; color: var(--ink-4); }
-  .gap-slider {
-    -webkit-appearance: slider-vertical;
-    appearance: slider-vertical;
-    writing-mode: vertical-lr;
-    direction: rtl;
-    width: 6px; height: 90px;
-    cursor: ns-resize;
-    accent-color: var(--accent);
-  }
-  .gap-val { font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); font-weight: 500; }
   body.editing tr.drag-over > td { background: color-mix(in oklch, var(--accent) 8%, transparent); }
   body.editing tr.dragging { opacity: 0.4; }
   body.editing .section.drag-over > .section-head { border-bottom-color: var(--accent); }
@@ -856,7 +868,7 @@
   @media print {
     html, body { background: #fff; }
     .appbar, .tweaks, .row-controls, .add-row, .sec-ctrls, .logo-ctrls, .logo-add, .add-sec, .pbreak-slot, .row-del,
-    .crew-ctrls, .chk .row-ctrls, .drag-handle, .gap-control { display: none !important; }
+    .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer { display: none !important; }
     /* Hide sidebar, show only call sheet */
     .workspace { display: block !important; height: auto !important; overflow: visible !important; }
     .intake-sidebar { display: none !important; }
@@ -912,9 +924,11 @@
 
 <!-- App bar -->
 <div class="appbar">
-  <div class="brand">
-    Call Sheet
-    <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
+  <div class="appbar-left">
+    <div class="brand">
+      Call Sheet
+      <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
+    </div>
   </div>
   <div class="day-switcher" id="daySwitcher"></div>
   <div class="spacer"></div>
@@ -981,6 +995,7 @@
     </div>
   </div>
 </div>
+<div class="intake-resizer" id="intakeResizer" title="Resize intake"></div>
 
 <!-- RIGHT: Call sheet -->
 <div class="sheet-main">
@@ -1073,13 +1088,6 @@
 
 </div><!-- end .workspace -->
 
-<!-- Section spacing slider -->
-<div class="gap-control" id="gapControl">
-  <label>Spacing</label>
-  <input type="range" id="gapSlider" class="gap-slider" min="0" max="24" value="4" step="1">
-  <span class="gap-val" id="gapVal">4mm</span>
-</div>
-
 <!-- Tweaks panel -->
 <div class="tweaks">
   <h4>Tweaks <button class="close" id="tweaksClose">×</button></h4>
@@ -1107,6 +1115,7 @@ window.__LOGO_SA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABLcAAAEeCAYAAA
 
 const CS_KEY = 'callsheet.app.v2';
 const CS_KEY_V1 = 'callsheet.app.v1';
+const INTAKE_WIDTH_KEY = 'callsheet.intakeWidth';
 const uid = () => Math.random().toString(36).slice(2, 9);
 const MULTILINE_META_KEYS = new Set([
   'company',
@@ -1381,6 +1390,51 @@ function save() {
   }, 250);
 }
 function setStatus(t) { const el = document.getElementById('saveStatus'); if (el) el.textContent = t; }
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function setIntakeWidth(width, persist = true) {
+  const px = Math.round(clamp(width, 200, 520));
+  document.documentElement.style.setProperty('--intake-w', `${px}px`);
+  if (persist) {
+    try { localStorage.setItem(INTAKE_WIDTH_KEY, String(px)); } catch {}
+  }
+}
+
+function initIntakeResize() {
+  const resizer = document.getElementById('intakeResizer');
+  const sidebar = document.getElementById('intakeSidebar');
+  if (!resizer || !sidebar) return;
+
+  try {
+    const stored = Number(localStorage.getItem(INTAKE_WIDTH_KEY));
+    if (stored) setIntakeWidth(stored, false);
+  } catch {}
+
+  let startX = 0;
+  let startW = 0;
+
+  const onMove = e => {
+    setIntakeWidth(startW + (e.clientX - startX));
+  };
+  const onUp = () => {
+    document.body.classList.remove('resizing-intake');
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+  };
+
+  resizer.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = sidebar.getBoundingClientRect().width;
+    document.body.classList.add('resizing-intake');
+    resizer.setPointerCapture?.(e.pointerId);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  });
+}
 
 // ---- utilities ----
 const esc = s => (s == null ? '' : String(s))
@@ -2826,18 +2880,7 @@ function initChrome() {
   if (bA4) bA4.addEventListener('click', () => { store.tweaks.paperSize = 'a4'; save(); applyTweaks(); });
   if (bLetter) bLetter.addEventListener('click', () => { store.tweaks.paperSize = 'letter'; save(); applyTweaks(); });
 
-  // section spacing slider
-  const gapSlider = document.getElementById('gapSlider');
-  const gapVal = document.getElementById('gapVal');
-  if (gapSlider) {
-    const applyGap = () => {
-      const v = gapSlider.value;
-      document.getElementById('sectionsHost').style.setProperty('--section-gap', v + 'mm');
-      document.documentElement.style.setProperty('--section-gap', v + 'mm');
-      if (gapVal) gapVal.textContent = v + 'mm';
-    };
-    gapSlider.addEventListener('input', applyGap);
-  }
+  initIntakeResize();
 }
 
 // ---- BOOT ----

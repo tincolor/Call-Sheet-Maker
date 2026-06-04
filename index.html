@@ -36,9 +36,11 @@
 
 <!-- App bar -->
 <div class="appbar">
-  <div class="brand">
-    Call Sheet
-    <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
+  <div class="appbar-left">
+    <div class="brand">
+      Call Sheet
+      <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
+    </div>
   </div>
   <div class="day-switcher" id="daySwitcher"></div>
   <div class="spacer"></div>
@@ -105,6 +107,7 @@
     </div>
   </div>
 </div>
+<div class="intake-resizer" id="intakeResizer" title="Resize intake"></div>
 
 <!-- RIGHT: Call sheet -->
 <div class="sheet-main">
@@ -196,13 +199,6 @@
 </div>
 
 </div><!-- end .workspace -->
-
-<!-- Section spacing slider -->
-<div class="gap-control" id="gapControl">
-  <label>Spacing</label>
-  <input type="range" id="gapSlider" class="gap-slider" min="0" max="24" value="4" step="1">
-  <span class="gap-val" id="gapVal">4mm</span>
-</div>
 
 <!-- Tweaks panel -->
 <div class="tweaks">
