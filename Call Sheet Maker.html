@@ -595,6 +595,7 @@
   .pbreak-slot .pbreak-add:hover { color: var(--accent); }
   .pbreak-slot.is-break { display: block; }
   .pbreak-slot .pbreak-marker {
+    position: relative; z-index: 7;
     display: flex; align-items: center; justify-content: center;
     gap: 8px; padding: 4px 0;
     border-top: 1.5px dashed #D9534F;
@@ -654,6 +655,7 @@
   .sched-cont-subtitle { font-size: 9.5px; color: var(--ink-3); margin-top: 2px; }
   /* Screen-only visual indicator for the page break */
   .sched-cont-wrap .brk-bar {
+    position: relative; z-index: 7;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     height: 22px; margin-bottom: 8px;
     font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
@@ -1720,6 +1722,9 @@ function adjustSectionBreakSpacing() {
   // ── 1. Reset ALL dynamic paddings ──
   document.querySelectorAll('.section.after-break').forEach(s => s.style.paddingTop = '');
   document.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
+  document.querySelectorAll('.pbreak-marker, .sched-cont-wrap .brk-bar').forEach(el => {
+    el.style.transform = '';
+  });
 
   // Force synchronous reflow so subsequent getBCR calls are accurate
   const paperTop = paper.getBoundingClientRect().top;
@@ -1727,10 +1732,15 @@ function adjustSectionBreakSpacing() {
   // ── 2. Snapshot every break point BEFORE any padding is applied ──
   const sectionBreaks = Array.from(document.querySelectorAll('.section.after-break')).map(section => {
     const top = section.getBoundingClientRect().top - paperTop;
+    const marker = section.previousElementSibling?.classList.contains('pbreak-slot')
+      ? section.previousElementSibling.querySelector('.pbreak-marker')
+      : null;
     return {
       el: section,
       refTop: top,
       contentTop: top,
+      marker,
+      markerTop: marker ? marker.getBoundingClientRect().top - paperTop : null,
       applyPadding: px => { section.style.paddingTop = px > 0 ? `${px}px` : ''; },
     };
   });
@@ -1744,6 +1754,8 @@ function adjustSectionBreakSpacing() {
       el: content,
       refTop,
       contentTop: content.getBoundingClientRect().top - paperTop,
+      marker: bar,
+      markerTop: bar ? bar.getBoundingClientRect().top - paperTop : null,
       applyPadding: px => { content.style.paddingTop = px > 0 ? `${px}px` : ''; },
     };
   });
@@ -1753,11 +1765,18 @@ function adjustSectionBreakSpacing() {
 
   // ── 3. Apply padding in page order, compensating for earlier shifts ──
   let shift = 0; // running total of padding added by previous continuations
-  snapshots.forEach(({ refTop, contentTop, applyPadding }) => {
+  snapshots.forEach(({ refTop, contentTop, marker, markerTop, applyPadding }) => {
     const targetPage    = Math.ceil(refTop / pageSlot);          // from reset-state break point
     const actualTop     = contentTop + shift;                     // true current position
     const needed        = targetPage * pageSlot + topMarginPx - actualTop;
     const padding       = needed > 0 ? Math.round(needed) : 0;
+    if (marker && markerTop != null) {
+      const markerH = marker.getBoundingClientRect().height;
+      const pageGapTop = targetPage * pageSlot - 20;
+      const markerTargetTop = pageGapTop + ((20 - markerH) / 2);
+      const markerActualTop = markerTop + shift;
+      marker.style.transform = `translateY(${Math.round(markerTargetTop - markerActualTop)}px)`;
+    }
     applyPadding(padding);
     shift += padding;
   });
