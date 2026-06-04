@@ -1,10 +1,9 @@
 import { Fragment } from 'preact';
-import { useRef, useLayoutEffect } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { app, save } from '../store.js';
 import { storeSignal } from '../signals.js';
 import { uid, confirmDel } from '../utils.js';
-import { adjustSectionBreakSpacing } from '../render/reflow.js';
 import { drag } from '../render/drag.js';
 import { Schedule } from './Schedule.jsx';
 import { Contacts } from './Contacts.jsx';
@@ -12,36 +11,29 @@ import { Equipment } from './Equipment.jsx';
 import { KV } from './KV.jsx';
 import { Notes } from './Notes.jsx';
 
-export function Sections() {
-  const store = storeSignal.value;
-  const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
-  if (!state) return null;
-
-  const { sections = [] } = state;
-
-  useLayoutEffect(() => {
-    requestAnimationFrame(adjustSectionBreakSpacing);
-  }, [store]);
+export function Sections({ sections = [], pageBreaks = [], startIdx = 0 }) {
+  if (!sections.length) return null;
 
   return (
-    <div>
-      <PageBreakSlot before={sections[0]?.id || '__end__'} />
-      {sections.map((sec, idx) => (
+    <div class="sections-body">
+      {sections.map((sec, localIdx) => (
         <Fragment key={sec.id}>
-          <Section sec={sec} idx={idx} />
-          <PageBreakSlot before={sections[idx + 1]?.id || '__end__'} />
+          <Section sec={sec} idx={startIdx + localIdx} />
+          {localIdx < sections.length - 1 && (
+            <PageBreakSlot before={sections[localIdx + 1].id} pageBreaks={pageBreaks} />
+          )}
         </Fragment>
       ))}
     </div>
   );
 }
 
-function PageBreakSlot({ before }) {
+function PageBreakSlot({ before, pageBreaks = [] }) {
   const store = storeSignal.value;
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
   if (!state) return null;
 
-  const has = state.pageBreaks.some(p => p.before === before);
+  const has = pageBreaks.some(p => p.before === before);
 
   const handleAdd = () => {
     state.pageBreaks.push({ before });

@@ -4,7 +4,6 @@ import { DEFAULT_STORE } from './data.js';
 import { renderSheet, applyTweaks } from './render/sheet.js';
 import { deleteDay } from './days.js';
 import { exportCSV, importCSV } from './csv.js';
-import { addSection } from './components/Sections.jsx';
 import { initIntakeResize } from './intake.js';
 
 export function initChrome() {
@@ -29,11 +28,6 @@ export function initChrome() {
 
   const bDel = document.getElementById('btnDelDay');
   if (bDel) bDel.addEventListener('click', deleteDay);
-
-  // add section
-  document.querySelectorAll('[data-new]').forEach(b => 
-    b.addEventListener('click', () => addSection(b.dataset.new))
-  );
 
   // tweaks
   const btnTweaks = document.getElementById('btnTweaks');
