@@ -859,15 +859,15 @@
     #sectionsHost > .section { margin-bottom: 4mm; }
     a { color: inherit; }
     /* Force a hard page break before sections / schedule rows marked with a break. */
-    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 12mm; margin-bottom: 0; }
-    .section.after-break { break-before: page; page-break-before: always; padding-top: 22mm; }
+    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; margin-bottom: 0; }
+    .section.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; }
     /* Hide all screen-only elements */
     .paper::after { display: none !important; }
     .sched-cont-wrap .brk-bar { display: none !important; }
-    /* Continuation wrap: zero padding — the new @page handles spacing */
-    .sched-cont-content { padding-top: 0; }
+    /* Match the first page's paper top padding on forced continuation pages. */
+    .sched-cont-content { padding-top: 12mm !important; }
     /* Legacy row break — should not appear in new builds but kept for safety */
     table.sched tr.after-break-row { break-before: page; page-break-before: always; }
-    table.sched tr.after-break-row > td { padding-top: 62mm; }
+    table.sched tr.after-break-row > td { padding-top: 12mm !important; }
     [contenteditable="true"]:empty::before { content: ""; }
   }

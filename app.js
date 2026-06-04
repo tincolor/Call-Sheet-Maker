@@ -604,10 +604,10 @@ function renderSections() {
 // Pushes after-break sections and schedule continuation pages to the correct
 // visual page boundary on screen (print uses break-before: page natively).
 //
-// Schedule continuations are measured all-at-once in the reset state, then
-// paddings are applied sequentially with a cumulative-shift tracker. This
-// prevents a compounding bug where setting padding N shifts bar N+1 past a
-// page boundary, causing each subsequent margin to be ~one full page too tall.
+// All break points are measured together in the reset state, then paddings are
+// applied in visual order with a cumulative-shift tracker. This prevents a
+// compounding bug where setting padding N shifts break N+1 past a page
+// boundary, causing each subsequent margin to become ~one full page too tall.
 function adjustSectionBreakSpacing() {
   const paper = document.getElementById('paper');
   if (!paper) return;
@@ -623,35 +623,41 @@ function adjustSectionBreakSpacing() {
   // Force synchronous reflow so subsequent getBCR calls are accurate
   const paperTop = paper.getBoundingClientRect().top;
 
-  // ── 2. Section page breaks (sequential: each measurement reflects prior sets) ──
-  document.querySelectorAll('.section.after-break').forEach(sec => {
-    const secTop = sec.getBoundingClientRect().top - paperTop;
-    const curPage = Math.floor(secTop / pageSlot);
-    const needed  = (curPage + 1) * pageSlot + topMarginPx - secTop;
-    if (needed > 0) sec.style.paddingTop = Math.round(needed) + 'px';
+  // ── 2. Snapshot every break point BEFORE any padding is applied ──
+  const sectionBreaks = Array.from(document.querySelectorAll('.section.after-break')).map(section => {
+    const top = section.getBoundingClientRect().top - paperTop;
+    return {
+      el: section,
+      refTop: top,
+      contentTop: top,
+      applyPadding: px => { section.style.paddingTop = px > 0 ? `${px}px` : ''; },
+    };
   });
 
-  // ── 3. Schedule continuation pages ──
-  // Snapshot bar & content positions in reset state BEFORE any padding is applied.
-  // Setting padding N shifts bar N+1; if that shift crosses a page boundary,
-  // Math.ceil gives the wrong target page. Using reset-state refs + a cumulative
-  // offset avoids the drift entirely.
-  const contEls = Array.from(document.querySelectorAll('.sched-cont-content'));
-  const snapshots = contEls.map(content => {
+  const scheduleBreaks = Array.from(document.querySelectorAll('.sched-cont-content')).map(content => {
     const bar    = content.closest('.sched-cont-wrap')?.querySelector('.brk-bar');
     const refTop = bar
       ? bar.getBoundingClientRect().top - paperTop
       : content.getBoundingClientRect().top - paperTop;
-    return { content, refTop, contentTop: content.getBoundingClientRect().top - paperTop };
+    return {
+      el: content,
+      refTop,
+      contentTop: content.getBoundingClientRect().top - paperTop,
+      applyPadding: px => { content.style.paddingTop = px > 0 ? `${px}px` : ''; },
+    };
   });
 
+  const snapshots = [...sectionBreaks, ...scheduleBreaks]
+    .sort((a, b) => a.refTop - b.refTop);
+
+  // ── 3. Apply padding in page order, compensating for earlier shifts ──
   let shift = 0; // running total of padding added by previous continuations
-  snapshots.forEach(({ content, refTop, contentTop }) => {
-    const targetPage    = Math.ceil(refTop / pageSlot);          // from reset-state bar
+  snapshots.forEach(({ refTop, contentTop, applyPadding }) => {
+    const targetPage    = Math.ceil(refTop / pageSlot);          // from reset-state break point
     const actualTop     = contentTop + shift;                     // true current position
     const needed        = targetPage * pageSlot + topMarginPx - actualTop;
     const padding       = needed > 0 ? Math.round(needed) : 0;
-    if (padding > 0) content.style.paddingTop = padding + 'px';
+    applyPadding(padding);
     shift += padding;
   });
 }
