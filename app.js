@@ -621,6 +621,7 @@ function adjustSectionBreakSpacing() {
   document.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
   document.querySelectorAll('.pbreak-marker, .sched-cont-wrap .brk-bar').forEach(el => {
     el.style.transform = '';
+    el.style.visibility = '';
   });
 
   // Force synchronous reflow so subsequent getBCR calls are accurate
@@ -634,6 +635,7 @@ function adjustSectionBreakSpacing() {
       : null;
     return {
       el: section,
+      kind: 'section',
       refTop: top,
       contentTop: top,
       marker,
@@ -649,6 +651,7 @@ function adjustSectionBreakSpacing() {
       : content.getBoundingClientRect().top - paperTop;
     return {
       el: content,
+      kind: 'schedule',
       refTop,
       contentTop: content.getBoundingClientRect().top - paperTop,
       marker: bar,
@@ -658,16 +661,26 @@ function adjustSectionBreakSpacing() {
   });
 
   const snapshots = [...sectionBreaks, ...scheduleBreaks]
+    .map(snapshot => ({
+      ...snapshot,
+      targetPage: Math.ceil(snapshot.refTop / pageSlot),
+    }))
     .sort((a, b) => a.refTop - b.refTop);
+  const scheduleMarkerPages = new Set(
+    snapshots
+      .filter(snapshot => snapshot.kind === 'schedule' && snapshot.marker)
+      .map(snapshot => snapshot.targetPage)
+  );
 
   // ── 3. Apply padding in page order, compensating for earlier shifts ──
   let shift = 0; // running total of padding added by previous continuations
-  snapshots.forEach(({ refTop, contentTop, marker, markerTop, applyPadding }) => {
-    const targetPage    = Math.ceil(refTop / pageSlot);          // from reset-state break point
+  snapshots.forEach(({ kind, targetPage, contentTop, marker, markerTop, applyPadding }) => {
     const actualTop     = contentTop + shift;                     // true current position
     const needed        = targetPage * pageSlot + topMarginPx - actualTop;
     const padding       = needed > 0 ? Math.round(needed) : 0;
     if (marker && markerTop != null) {
+      const duplicateSectionMarker = kind === 'section' && scheduleMarkerPages.has(targetPage);
+      marker.style.visibility = duplicateSectionMarker ? 'hidden' : '';
       const markerH = marker.getBoundingClientRect().height;
       const pageGapTop = targetPage * pageSlot - 20;
       const markerTargetTop = pageGapTop + ((20 - markerH) / 2);
