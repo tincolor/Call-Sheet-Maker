@@ -35,25 +35,37 @@ function extractFunctionSource(source, name) {
 const index = await read('index.html');
 const styles = await read('styles.css');
 const logos = await read('logos.inline.js');
-const app = await read('app.js');
+const parserContent = await read('src/parser.js');
 const release = await read('Call Sheet Maker.html');
 
 assert(index.includes('<link rel="stylesheet" href="styles.css" />'), 'index.html must load styles.css');
 assert(index.includes('<script src="logos.inline.js"></script>'), 'index.html must load logos.inline.js');
+assert(index.includes('<script src="src/utils.js"></script>'), 'index.html must load src/utils.js');
+assert(index.includes('<script src="src/state.js"></script>'), 'index.html must load src/state.js');
+assert(index.includes('<script src="src/parser.js"></script>'), 'index.html must load src/parser.js');
+assert(index.includes('<script src="src/intake.js"></script>'), 'index.html must load src/intake.js');
+assert(index.includes('<script src="src/reflow.js"></script>'), 'index.html must load src/reflow.js');
+assert(index.includes('<script src="src/render.js"></script>'), 'index.html must load src/render.js');
 assert(index.includes('<script src="app.js"></script>'), 'index.html must load app.js');
 assert(styles.includes('.paper'), 'styles.css should contain sheet styles');
 assert(logos.includes('window.__LOGO_BBC'), 'logos.inline.js should define built-in logos');
-assert(app.includes('function parseCSVtoDrafts'), 'app.js should contain CSV import parser');
+assert(parserContent.includes('function parseCSVtoDrafts'), 'parser.js should contain CSV import parser');
 assert(release === await buildSingleFile(), 'Call Sheet Maker.html is out of date');
 
+checkSyntax('src/utils.js');
+checkSyntax('src/state.js');
+checkSyntax('src/parser.js');
+checkSyntax('src/intake.js');
+checkSyntax('src/reflow.js');
+checkSyntax('src/render.js');
 checkSyntax('app.js');
 checkSyntax('logos.inline.js');
 checkSyntax('scripts/build-single-file.mjs');
 
 const parserSource = [
   'const uid = () => "test-id";',
-  extractFunctionSource(app, 'parseCSV'),
-  extractFunctionSource(app, 'parseCSVtoDrafts'),
+  extractFunctionSource(parserContent, 'parseCSV'),
+  extractFunctionSource(parserContent, 'parseCSVtoDrafts'),
   'return parseCSVtoDrafts(input);',
 ].join('\n');
 const parseCSVtoDrafts = new Function('input', parserSource);

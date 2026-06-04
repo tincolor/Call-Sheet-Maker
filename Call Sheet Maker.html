@@ -878,21 +878,21 @@
     /* CRITICAL: flex parents disable page-break/break-before on children.
        Switch layout containers to block for print so fragmentation works. */
     .page-wrap { display: block; padding: 0; }
-    .paper { display: block; box-shadow: none; width: var(--paper-w); min-height: var(--paper-h); margin: 0; padding: 12mm; }
+    .paper { display: block; box-shadow: none; width: var(--paper-w); min-height: var(--paper-h); margin: 0; padding: 14mm 12mm 16mm; }
     #sectionsHost { display: block; }
     #sectionsHost > .section { margin-bottom: 4mm; }
     a { color: inherit; }
     /* Force a hard page break before sections / schedule rows marked with a break. */
-    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; margin-bottom: 0; }
-    .section.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; }
+    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 14mm !important; margin-bottom: 0; }
+    .section.after-break { break-before: page; page-break-before: always; padding-top: 14mm !important; }
     /* Hide all screen-only elements */
     .paper::after { display: none !important; }
     .sched-cont-wrap .brk-bar { display: none !important; }
     /* Match the first page's paper top padding on forced continuation pages. */
-    .sched-cont-content { padding-top: 12mm !important; }
+    .sched-cont-content { padding-top: 14mm !important; }
     /* Legacy row break — should not appear in new builds but kept for safety */
     table.sched tr.after-break-row { break-before: page; page-break-before: always; }
-    table.sched tr.after-break-row > td { padding-top: 12mm !important; }
+    table.sched tr.after-break-row > td { padding-top: 14mm !important; }
     [contenteditable="true"]:empty::before { content: ""; }
   }
 </style>
@@ -1110,13 +1110,17 @@ window.__LOGO_SA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABLcAAAEeCAYAAA
 </script>
 <script>
 // ============================================================
-// Call Sheet — data-driven app (multi-day)
+// SHARED UTILITIES & CONSTANTS MODULE
 // ============================================================
 
 const CS_KEY = 'callsheet.app.v2';
 const CS_KEY_V1 = 'callsheet.app.v1';
 const INTAKE_WIDTH_KEY = 'callsheet.intakeWidth';
+const API_KEY_STORAGE = 'callsheet.claudeApiKey';
+const API_MODEL_STORAGE = 'callsheet.claudeApiModel';
+
 const uid = () => Math.random().toString(36).slice(2, 9);
+
 const MULTILINE_META_KEYS = new Set([
   'company',
   'address',
@@ -1127,6 +1131,121 @@ const MULTILINE_META_KEYS = new Set([
   'weatherCallout',
   'headerNote',
 ]);
+
+const esc = s => (s == null ? '' : String(s))
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function confirmDel(msg) { return confirm(msg); }
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+// ---- Text & HTML Editing Helpers ----
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<div><br><\/div>/gi, '\n')
+    .replace(/<\/div>\s*<div>/gi, '\n')
+    .replace(/<div>/gi, '')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function textToHTML(text) {
+  const safe = esc(String(text || '').replace(/\r\n?/g, '\n'));
+  return safe.replace(/\n/g, '<br>');
+}
+
+function getEditableText(el, multiline = false) {
+  return multiline ? htmlToText(el.innerHTML) : el.textContent;
+}
+
+function setEditableText(el, value, multiline = false) {
+  if (multiline) el.innerHTML = textToHTML(value);
+  else el.textContent = value || '';
+}
+
+function insertLineBreak() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const br = document.createElement('br');
+  range.insertNode(br);
+  range.setStartAfter(br);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function wireMultilineEditing(el) {
+  if (el.dataset.multilineWired) return;
+  el.dataset.multilineWired = '1';
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      insertLineBreak();
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+}
+
+// ---- Time & Duration Helpers ----
+function parseTimeValue(value) {
+  const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hours = Number(m[1]);
+  const mins = Number(m[2]);
+  if (hours > 23 || mins > 59) return null;
+  return (hours * 60) + mins;
+}
+
+function formatTimeValue(totalMinutes) {
+  if (totalMinutes == null || Number.isNaN(totalMinutes)) return '';
+  const minsInDay = 24 * 60;
+  const safe = ((totalMinutes % minsInDay) + minsInDay) % minsInDay;
+  const hours = Math.floor(safe / 60);
+  const mins = safe % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
+function parseDurationValue(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return null;
+  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*h/);
+  const minMatch = text.match(/(\d+)\s*m/);
+  const hours = hourMatch ? Math.round(Number(hourMatch[1]) * 60) : 0;
+  const mins = minMatch ? Number(minMatch[1]) : 0;
+  const total = hours + mins;
+  return total > 0 ? total : null;
+}
+
+function recalculateScheduleTimes(sec, startIndex = 1) {
+  for (let i = Math.max(1, startIndex); i < sec.data.length; i++) {
+    const prev = sec.data[i - 1];
+    const cur = sec.data[i];
+    const prevTime = parseTimeValue(prev?.time);
+    const prevDur = parseDurationValue(prev?.dur);
+    if (prevTime == null || prevDur == null || !cur) continue;
+    cur.time = formatTimeValue(prevTime + prevDur);
+  }
+}
+
+function syncScheduleTimeCells(tb, sec, startIndex = 1) {
+  for (let i = Math.max(1, startIndex); i < sec.data.length; i++) {
+    const el = tb.querySelector(`[data-f="time"][data-i="${i}"]`);
+    if (el) el.textContent = sec.data[i].time || '';
+  }
+}
+</script>
+<script>
+// ============================================================
+// STATE & STORAGE MODULE
+// ============================================================
 
 // ---- default day (populated from Day 3 sheet) ----
 const DEFAULT_DAY = () => ({
@@ -1279,58 +1398,6 @@ function currentDay() {
   return store.days.find(d => d.id === store.currentDayId) || store.days[0];
 }
 
-function htmlToText(html) {
-  return String(html || '')
-    .replace(/<div><br><\/div>/gi, '\n')
-    .replace(/<\/div>\s*<div>/gi, '\n')
-    .replace(/<div>/gi, '')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/\r\n?/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function textToHTML(text) {
-  const safe = esc(String(text || '').replace(/\r\n?/g, '\n'));
-  return safe.replace(/\n/g, '<br>');
-}
-
-function getEditableText(el, multiline = false) {
-  return multiline ? htmlToText(el.innerHTML) : el.textContent;
-}
-
-function setEditableText(el, value, multiline = false) {
-  if (multiline) el.innerHTML = textToHTML(value);
-  else el.textContent = value || '';
-}
-
-function insertLineBreak() {
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  range.deleteContents();
-  const br = document.createElement('br');
-  range.insertNode(br);
-  range.setStartAfter(br);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
-
-function wireMultilineEditing(el) {
-  if (el.dataset.multilineWired) return;
-  el.dataset.multilineWired = '1';
-  el.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      insertLineBreak();
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
-}
-
 function normalizeMultilineFields(day) {
   if (!day?.meta) return;
   if (!('headerNote' in day.meta)) day.meta.headerNote = '';
@@ -1377,9 +1444,6 @@ function load() {
   return DEFAULT_STORE();
 }
 
-let _drag = null;      // shared drag-and-drop state
-let _reflowing = false; // prevents recursive autoReflow calls
-
 let saveTimer;
 function save() {
   clearTimeout(saveTimer);
@@ -1389,119 +1453,484 @@ function save() {
     setStatus('saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
   }, 250);
 }
+
 function setStatus(t) { const el = document.getElementById('saveStatus'); if (el) el.textContent = t; }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+// ---- multi-day modifications ----
+function newDay() {
+  // Option: duplicate current day or create a blank one
+  const choice = confirm('OK = Duplicate current day\nCancel = Create blank day');
+  const d = choice ? JSON.parse(JSON.stringify(state)) : BLANK_DAY();
+  d.id = uid();
+  // Assign fresh UIDs to sections to avoid duplicates in DOM
+  d.sections.forEach(s => s.id = uid());
+  if (choice) {
+    // increment day counter & clear date
+    const dNum = Number(d.meta.day);
+    if (!Number.isNaN(dNum)) d.meta.day = String(dNum + 1);
+    d.meta.date = '';
+  }
+  store.days.push(d);
+  store.currentDayId = d.id;
+  state = currentDay();
+  save();
+  renderDaySwitcher();
+  renderSheet();
 }
 
-function setIntakeWidth(width, persist = true) {
-  const px = Math.round(clamp(width, 200, 520));
-  document.documentElement.style.setProperty('--intake-w', `${px}px`);
-  if (persist) {
-    try { localStorage.setItem(INTAKE_WIDTH_KEY, String(px)); } catch {}
+function deleteDay() {
+  if (store.days.length <= 1) {
+    alert('Cannot delete the only day.');
+    return;
+  }
+  const label = (state.meta.date || `Day ${state.meta.day || ''}`).trim();
+  if (!confirm(`Delete ${label || 'this day'}? (Cannot undo.)`)) return;
+
+  const idx = store.days.findIndex(d => d.id === state.id);
+  store.days.splice(idx, 1);
+  // switch to another day
+  store.currentDayId = store.days[Math.max(0, idx - 1)].id;
+  state = currentDay();
+  save();
+  renderSheet();
+  renderDaySwitcher();
+}
+
+function renameDay() {
+  const label = (state.meta.date || `Day ${state.meta.day || ''}`).trim();
+  const res = prompt('Enter a date or day label for this tab:', label);
+  if (res === null) return;
+  state.meta.date = res;
+  save();
+  renderDaySwitcher();
+  // Update header field visually
+  const dateEl = document.querySelector('[data-k="date"]');
+  if (dateEl) dateEl.textContent = res;
+}
+</script>
+<script>
+// ============================================================
+// CSV IMPORT / EXPORT MODULE
+// ============================================================
+
+function csvEscape(s) {
+  s = s == null ? '' : String(s);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+
+function dayToCSVLines(day) {
+  const lines = [];
+  lines.push('# META'); lines.push('key,value');
+  Object.entries(day.meta).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
+  lines.push('');
+  day.sections.forEach(sec => {
+    lines.push(`# ${sec.type.toUpperCase()} · ${sec.title}`);
+    if (Array.isArray(sec.data)) {
+      if (sec.data.length === 0) { lines.push(''); return; }
+      const cols = Object.keys(sec.data[0]);
+      lines.push(cols.join(','));
+      sec.data.forEach(r => lines.push(cols.map(c => csvEscape(r[c])).join(',')));
+    } else if (sec.data && typeof sec.data === 'object') {
+      lines.push('key,value');
+      Object.entries(sec.data).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
+    }
+    lines.push('');
+  });
+  return lines;
+}
+
+function exportCSV() {
+  // Ask scope: current day only, or all days concatenated
+  let scope = 'current';
+  if (store.days.length > 1) {
+    const choice = confirm(
+      `You have ${store.days.length} days.\n\n` +
+      `OK = Export ALL days (one file, split by "# DAY" markers)\n` +
+      `Cancel = Export current day only`
+    );
+    scope = choice ? 'all' : 'current';
+  }
+
+  const lines = [];
+  const daysToExport = scope === 'all' ? store.days : [state];
+  daysToExport.forEach((day, i) => {
+    const label = (day.meta?.date || `Day ${day.meta?.day || (i+1)}`).trim();
+    if (scope === 'all') {
+      lines.push(`# DAY · ${label}`);
+      lines.push('');
+    }
+    lines.push(...dayToCSVLines(day));
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `call-sheet-${(state.meta.date || 'export').replace(/[^\w.-]/g,'_')}.csv`;
+  a.click();
+}
+
+function importCSV() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.csv,text/csv';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const drafts = parseCSVtoDrafts(fr.result);
+        if (drafts.length === 0) { alert('No content found in CSV.'); return; }
+
+        if (drafts.length === 1) {
+          // Single day — go through the verify/preview flow
+          intakeDraft = drafts[0];
+          renderIntakePreview();
+          switchTab('intake');
+          setIntakeStep('verify');
+          return;
+        }
+
+        // Multi-day — create all days at once, after confirming
+        const action = confirm(
+          `This CSV contains ${drafts.length} days:\n\n` +
+          drafts.map((d, i) => `  ${i+1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
+          `\n\nOK   = Replace all existing days with these\n` +
+          `Cancel = Append these as new days (keep existing)`
+        );
+
+        const fresh = drafts.map(d => ({
+          id: uid(),
+          meta: d.meta || {},
+          logos: DEFAULT_DAY().logos,
+          pageBreaks: [],
+          sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
+        }));
+
+        if (action) {
+          store.days = fresh;
+        } else {
+          store.days.push(...fresh);
+        }
+        store.currentDayId = fresh[0].id;
+        state = currentDay();
+        save();
+        renderSheet();
+        renderDaySwitcher();
+        switchTab('sheet');
+      } catch (e) {
+        alert('CSV parse error: ' + e.message);
+      }
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+}
+
+function parseCSV(txt) {
+  // tolerant CSV parser — quoted strings, escaped quotes
+  const rows = []; let row = []; let cur = ''; let q = false;
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if (q) {
+      if (ch === '"' && txt[i+1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') q = false;
+      else cur += ch;
+    } else {
+      if (ch === '"') q = true;
+      else if (ch === ',') { row.push(cur); cur = ''; }
+      else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+      else if (ch === '\r') {}
+      else cur += ch;
+    }
+  }
+  if (cur.length || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function parseCSVtoDrafts(txt) {
+  const rows = parseCSV(txt);
+  const drafts = [];
+  let draft = null;
+  let mode = null, header = null, cur = null;
+
+  const ensureDraft = () => {
+    if (!draft) { draft = { meta: {}, sections: [] }; drafts.push(draft); }
+    return draft;
+  };
+
+  for (const r of rows) {
+    if (r.length === 1 && r[0] === '') { mode = null; continue; }
+    const first = (r[0] || '').trim();
+
+    // DAY separator — starts a new day draft
+    if (first.startsWith('# DAY')) {
+      draft = { meta: {}, sections: [] };
+      drafts.push(draft);
+      mode = null; header = null; cur = null;
+      continue;
+    }
+    if (first.startsWith('# META')) { ensureDraft(); mode = 'meta'; continue; }
+    if (first.startsWith('# ')) {
+      // Only recognize known section types; treat anything else as a comment line.
+      const body = first.slice(2).trimStart();
+      const [typeRaw, ...titleParts] = body.split(' · ');
+      const type = typeRaw.trim().toLowerCase();
+      const VALID = ['schedule','contacts','equipment','hospital','basecamp','notes'];
+      if (!VALID.includes(type)) {
+        // comment — ignore but end any current section parse so stray keys don't
+        // leak into the last section's data
+        mode = null; cur = null; header = null;
+        continue;
+      }
+      ensureDraft();
+      const title = titleParts.join(' · ').trim();
+      cur = { id: uid(), type, title, data: ['hospital','basecamp','notes'].includes(type) ? {} : [] };
+      draft.sections.push(cur);
+      mode = 'sec'; header = null; continue;
+    }
+    if (mode === 'meta') {
+      if (r[0] === 'key' && r[1] === 'value') continue;
+      ensureDraft().meta[r[0]] = r[1];
+    } else if (mode === 'sec' && cur) {
+      if (!header) { header = r; continue; }
+      if (Array.isArray(cur.data)) {
+        const obj = {};
+        header.forEach((h, i) => obj[h] = r[i] || '');
+        if (cur.type === 'equipment' && 'done' in obj) obj.done = obj.done === 'true';
+        cur.data.push(obj);
+      } else {
+        cur.data[r[0]] = r[1];
+      }
+    }
+  }
+  return drafts;
+}
+
+// Legacy single-draft shim (still used by any callers)
+function parseCSVtoDraft(txt) {
+  const drafts = parseCSVtoDrafts(txt);
+  return drafts[0] || { meta: {}, sections: [] };
+}
+</script>
+<script>
+// ============================================================
+// LLM INTAKE SIDEBAR MODULE
+// ============================================================
+
+let intakeDraft = null; // parsed JSON awaiting verify
+
+function initIntake() {
+  const btn = document.getElementById('intakeInterpret');
+  btn.addEventListener('click', runIntake);
+  document.getElementById('intakeCancel').addEventListener('click', resetIntake);
+  document.getElementById('intakePublish').addEventListener('click', publishIntake);
+  document.getElementById('intakeRetry').addEventListener('click', runIntake);
+
+  const keyInput = document.getElementById('apiKeyInput');
+  const keySave  = document.getElementById('apiKeySave');
+  const keyClear = document.getElementById('apiKeyClear');
+  const keyModel = document.getElementById('apiKeyModel');
+
+  if (keyInput && keySave && keyClear && keyModel) {
+    initApiKey();
   }
 }
 
-function initIntakeResize() {
-  const resizer = document.getElementById('intakeResizer');
-  const sidebar = document.getElementById('intakeSidebar');
-  if (!resizer || !sidebar) return;
-
-  try {
-    const stored = Number(localStorage.getItem(INTAKE_WIDTH_KEY));
-    if (stored) setIntakeWidth(stored, false);
-  } catch {}
-
-  let startX = 0;
-  let startW = 0;
-
-  const onMove = e => {
-    setIntakeWidth(startW + (e.clientX - startX));
-  };
-  const onUp = () => {
-    document.body.classList.remove('resizing-intake');
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
-  };
-
-  resizer.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    startX = e.clientX;
-    startW = sidebar.getBoundingClientRect().width;
-    document.body.classList.add('resizing-intake');
-    resizer.setPointerCapture?.(e.pointerId);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp, { once: true });
+async function completeWithClaude(userContent) {
+  const key = getApiKey();
+  if (key) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: getApiModel(),
+        max_tokens: 8000,
+        messages: [{ role: 'user', content: userContent }],
+      }),
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json())?.error?.message || ''; } catch {}
+      throw new Error(`Claude API ${res.status}: ${detail || res.statusText}`);
+    }
+    const json = await res.json();
+    return (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  }
+  // fall back to built-in helper (design environment)
+  if (!window.claude?.complete) {
+    throw new Error('No API key set and built-in Claude helper is not available. Save an API key in the panel below.');
+  }
+  return await window.claude.complete({
+    messages: [{ role: 'user', content: userContent }],
   });
 }
 
-// ---- utilities ----
-const esc = s => (s == null ? '' : String(s))
-  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const INTAKE_SYSTEM = `You convert raw production text (messages, emails, notes; may be mixed English/Japanese) into a compact JSON call-sheet object. Keep output SHORT — omit any key whose value is empty. Use this shape:
 
-function confirmDel(msg) { return confirm(msg); }
-
-function parseTimeValue(value) {
-  const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const hours = Number(m[1]);
-  const mins = Number(m[2]);
-  if (hours > 23 || mins > 59) return null;
-  return (hours * 60) + mins;
+{ "meta": { "company"?, "address"?, "project"?, "client"?, "mainLocation"?, "date"?, "day"?, "shootCall"?, "emergency"?, "weatherCallout"?, "headerNote"?, "sunrise"?, "sunset"? },
+  "sections": [
+    { "type": "schedule", "title": "...", "data": [ { "type": "row", "time": "...", "dur": "...", "task": "...", "loc": "...", "cast": "...", "note": "..." }, { "type": "span", "time": "...", "text": "..." } ] },
+    { "type": "contacts", "title": "...", "data": [ { "role": "...", "name": "...", "phone": "..." } ] },
+    { "type": "equipment", "title": "...", "data": [ { "text": "...", "done": false } ] },
+    { "type": "hospital", "title": "...", "data": { "name": "...", "addr": "...", "phone": "...", "hours": "...", "dist": "..." } },
+    { "type": "basecamp", "title": "...", "data": { "name": "...", "addr": "...", "parking": "...", "restroom": "...", "catering": "..." } },
+    { "type": "notes", "title": "Notes", "data": { "text": "..." } }
+  ]
 }
 
-function formatTimeValue(totalMinutes) {
-  if (totalMinutes == null || Number.isNaN(totalMinutes)) return '';
-  const minsInDay = 24 * 60;
-  const safe = ((totalMinutes % minsInDay) + minsInDay) % minsInDay;
-  const hours = Math.floor(safe / 60);
-  const mins = safe % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+Rules: only include sections that have content. Inside each section, only include fields that are present. Anything that does not fit goes into a notes section. Return ONLY the JSON object — no markdown, no prose, no commentary.`;
+
+// Attempt to repair JSON that was truncated mid-output (Haiku 1024-token cap).
+// Strategy: close any open string, then close arrays/objects in reverse-stack order.
+function tryRepairJSON(s) {
+  s = s.trim();
+  // strip trailing comma / dangling key
+  s = s.replace(/,\s*$/, '');
+  const stack = [];
+  let inStr = false, escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{' || c === '[') stack.push(c);
+    else if (c === '}' || c === ']') stack.pop();
+  }
+  if (inStr) s += '"';
+  // if we ended inside an incomplete key-value (e.g. "key": with no value)
+  s = s.replace(/,?\s*"[^"]*"\s*:\s*$/, '');
+  s = s.replace(/,\s*$/, '');
+  while (stack.length) {
+    const o = stack.pop();
+    s += (o === '{' ? '}' : ']');
+  }
+  return s;
 }
 
-function parseDurationValue(value) {
-  const text = String(value || '').trim().toLowerCase();
-  if (!text) return null;
-  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*h/);
-  const minMatch = text.match(/(\d+)\s*m/);
-  const hours = hourMatch ? Math.round(Number(hourMatch[1]) * 60) : 0;
-  const mins = minMatch ? Number(minMatch[1]) : 0;
-  const total = hours + mins;
-  return total > 0 ? total : null;
-}
-
-function recalculateScheduleTimes(sec, startIndex = 1) {
-  for (let i = Math.max(1, startIndex); i < sec.data.length; i++) {
-    const prev = sec.data[i - 1];
-    const cur = sec.data[i];
-    const prevTime = parseTimeValue(prev?.time);
-    const prevDur = parseDurationValue(prev?.dur);
-    if (prevTime == null || prevDur == null || !cur) continue;
-    cur.time = formatTimeValue(prevTime + prevDur);
+async function runIntake() {
+  const txt = document.getElementById('intakeInput').value.trim();
+  if (!txt) { alert('Paste some text first.'); return; }
+  setIntakeStep('loading');
+  try {
+    const raw = await completeWithClaude(
+      `${INTAKE_SYSTEM}\n\n--- INPUT START ---\n${txt}\n--- INPUT END ---`
+    );
+    const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    let parsed, repairedNote = '';
+    try {
+      parsed = JSON.parse(clean);
+    } catch (e1) {
+      const repaired = tryRepairJSON(clean);
+      try {
+        parsed = JSON.parse(repaired);
+        repairedNote = 'Output was truncated — some trailing content may be missing. Review carefully before publishing.';
+      } catch (e2) {
+        throw new Error('Could not parse model output. The response was likely truncated (Claude Haiku has a 1024-token output cap). Try pasting a smaller chunk, or break the input into parts. Original parse error: ' + e1.message);
+      }
+    }
+    intakeDraft = parsed;
+    renderIntakePreview(repairedNote);
+    setIntakeStep('verify');
+  } catch (e) {
+    document.getElementById('intakeError').textContent = e.message || String(e);
+    setIntakeStep('error');
   }
 }
 
-function syncScheduleTimeCells(tb, sec, startIndex = 1) {
-  for (let i = Math.max(1, startIndex); i < sec.data.length; i++) {
-    const el = tb.querySelector(`[data-f="time"][data-i="${i}"]`);
-    if (el) el.textContent = sec.data[i].time || '';
+function setIntakeStep(step) {
+  ['input','loading','verify','error'].forEach(s =>
+    document.getElementById('intake-' + s).style.display = (s === step ? '' : 'none'));
+}
+
+function resetIntake() {
+  intakeDraft = null;
+  document.getElementById('intakeInput').value = '';
+  setIntakeStep('input');
+}
+
+function renderIntakePreview(note = '') {
+  const host = document.getElementById('intakePreview');
+  host.innerHTML = '';
+  if (note) {
+    const n = document.createElement('div');
+    n.style.cssText = 'background:#FFF3B0;border:1px solid #CBB04F;color:#5A4700;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:12px;';
+    n.textContent = note;
+    host.appendChild(n);
   }
+
+  // META
+  const meta = intakeDraft.meta || {};
+  const curMeta = state.meta;
+  const metaTable = document.createElement('div');
+  metaTable.className = 'preview-block';
+  metaTable.innerHTML = `<h4>Header</h4><table class="pv"><tbody>${
+    Object.keys(meta).map(k => {
+      const v = meta[k] || '';
+      const changed = (v || '') !== (curMeta[k] || '');
+      return `<tr><td class="k">${esc(k)}</td><td class="v ${changed ? 'changed' : ''}" contenteditable="true" data-scope="meta" data-k="${esc(k)}">${esc(v)}</td></tr>`;
+    }).join('')
+  }</tbody></table>`;
+  host.appendChild(metaTable);
+
+  // SECTIONS
+  (intakeDraft.sections || []).forEach((sec, si) => {
+    const block = document.createElement('div');
+    block.className = 'preview-block';
+    block.innerHTML = `<h4>${esc(sec.title || sec.type)} <span class="tag">${esc(sec.type)}</span></h4>`;
+    if (Array.isArray(sec.data)) {
+      if (sec.data.length === 0) { block.innerHTML += '<p class="muted">(empty)</p>'; host.appendChild(block); return; }
+      const cols = Object.keys(sec.data[0]);
+      block.innerHTML += `<table class="pv"><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
+        sec.data.map((r, ri) => `<tr>${
+          cols.map(c => `<td class="v" contenteditable="true" data-scope="sec.row" data-si="${si}" data-ri="${ri}" data-c="${esc(c)}">${esc(r[c] != null ? r[c] : '')}</td>`).join('')
+        }</tr>`).join('')
+      }</tbody></table>`;
+    } else if (sec.data && typeof sec.data === 'object') {
+      const cols = Object.keys(sec.data);
+      block.innerHTML += `<table class="pv"><tbody>${
+        cols.map(c => `<tr><td class="k">${esc(c)}</td><td class="v" contenteditable="true" data-scope="sec.obj" data-si="${si}" data-c="${esc(c)}">${esc(sec.data[c] || '')}</td></tr>`).join('')
+      }</tbody></table>`;
+    }
+    host.appendChild(block);
+  });
+
+  // wire edits back into intakeDraft
+  host.querySelectorAll('[data-scope]').forEach(el => {
+    el.addEventListener('input', () => {
+      const s = el.dataset.scope;
+      if (s === 'meta') intakeDraft.meta[el.dataset.k] = el.textContent;
+      if (s === 'sec.row') intakeDraft.sections[+el.dataset.si].data[+el.dataset.ri][el.dataset.c] = el.textContent;
+      if (s === 'sec.obj') intakeDraft.sections[+el.dataset.si].data[el.dataset.c] = el.textContent;
+    });
+  });
 }
 
-// ============================================================
-// RENDER — Sheet tab
-// ============================================================
-
-function renderSheet() {
-  renderHeader();
-  renderLogos();
-  renderSections();
-  applyTweaks();
-  renderDaySwitcher();
-  // After layout settles, auto-calculate page breaks for schedule sections
-  if (!_reflowing) requestAnimationFrame(autoReflow);
+function publishIntake() {
+  if (!intakeDraft) return;
+  // merge meta
+  Object.assign(state.meta, intakeDraft.meta || {});
+  // merge / replace sections: assign new uids and append to existing
+  if (Array.isArray(intakeDraft.sections) && intakeDraft.sections.length) {
+    const action = confirm('OK = Replace existing sections with interpreted ones.\nCancel = Append to existing sections.');
+    const fresh = intakeDraft.sections.map(s => ({ ...s, id: uid() }));
+    if (action) state.sections = fresh;
+    else state.sections.push(...fresh);
+  }
+  save();
+  switchTab('sheet');
+  renderSheet();
+  resetIntake();
 }
+</script>
+<script>
+// ============================================================
+// PAGE REFLOW & SPACING MODULE
+// ============================================================
 
 // ---- AUTO PAGE-BREAK REFLOW ----
 // Measures each schedule row's bottom position relative to the paper top.
@@ -1514,7 +1943,7 @@ function autoReflow() {
 
   const mmToPx  = 96 / 25.4; // CSS pixels per mm (logical, not physical)
   const pageHPx = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
-  const padBotPx = 16 * mmToPx;
+  const padBotPx = 16 * mmToPx; // Matches bottom padding in styles.css
   const paperTop = paper.getBoundingClientRect().top;
 
   const needed = []; // { sectionId, idx } breaks to insert
@@ -1592,6 +2021,112 @@ function autoReflow() {
       adjustSectionBreakSpacing();
     }));
   }
+}
+
+// Pushes after-break sections and schedule continuation pages to the correct
+// visual page boundary on screen (print uses break-before: page natively).
+//
+// All break points are measured together in the reset state, then paddings are
+// applied in visual order with a cumulative-shift tracker. This prevents a
+// compounding bug where setting padding N shifts break N+1 past a page
+// boundary, causing each subsequent margin to become ~one full page too tall.
+function adjustSectionBreakSpacing() {
+  const paper = document.getElementById('paper');
+  if (!paper) return;
+  const mmToPx      = 96 / 25.4;
+  const pageH       = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
+  const pageSlot    = pageH + 20; // page height + 20px visual gap
+  const topMarginPx = 14 * mmToPx; // Matches the 14mm top padding of .paper in styles.css
+
+  // ── 1. Reset ALL dynamic paddings ──
+  document.querySelectorAll('.section.after-break').forEach(s => s.style.paddingTop = '');
+  document.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
+  document.querySelectorAll('.pbreak-marker, .sched-cont-wrap .brk-bar').forEach(el => {
+    el.style.transform = '';
+    el.style.visibility = '';
+  });
+
+  // Force synchronous reflow so subsequent getBCR calls are accurate
+  const paperTop = paper.getBoundingClientRect().top;
+
+  // ── 2. Snapshot every break point BEFORE any padding is applied ──
+  const sectionBreaks = Array.from(document.querySelectorAll('.section.after-break')).map(section => {
+    const top = section.getBoundingClientRect().top - paperTop;
+    const content = section.querySelector('.section-head') || section;
+    const marker = section.previousElementSibling?.classList.contains('pbreak-slot')
+      ? section.previousElementSibling.querySelector('.pbreak-marker')
+      : null;
+    return {
+      el: section,
+      kind: 'section',
+      refTop: top,
+      getContentTop: () => content.getBoundingClientRect().top - paperTop,
+      marker,
+      getMarkerTop: () => marker ? marker.getBoundingClientRect().top - paperTop : null,
+      applyPadding: px => { section.style.paddingTop = px > 0 ? `${px}px` : ''; },
+    };
+  });
+
+  const scheduleBreaks = Array.from(document.querySelectorAll('.sched-cont-content')).map(content => {
+    const bar    = content.closest('.sched-cont-wrap')?.querySelector('.brk-bar');
+    const refTop = bar
+      ? bar.getBoundingClientRect().top - paperTop
+      : content.getBoundingClientRect().top - paperTop;
+    return {
+      el: content,
+      kind: 'schedule',
+      refTop,
+      getContentTop: () => content.getBoundingClientRect().top - paperTop,
+      marker: bar,
+      getMarkerTop: () => bar ? bar.getBoundingClientRect().top - paperTop : null,
+      applyPadding: px => { content.style.paddingTop = px > 0 ? `${px}px` : ''; },
+    };
+  });
+
+  const snapshots = [...sectionBreaks, ...scheduleBreaks]
+    .sort((a, b) => a.refTop - b.refTop);
+  let nextTargetPage = 1;
+  snapshots.forEach(snapshot => {
+    snapshot.targetPage = Math.max(Math.ceil(snapshot.refTop / pageSlot), nextTargetPage);
+    nextTargetPage = snapshot.targetPage + 1;
+  });
+  const scheduleMarkerPages = new Set(
+    snapshots
+      .filter(snapshot => snapshot.kind === 'schedule' && snapshot.marker)
+      .map(snapshot => snapshot.targetPage)
+  );
+
+  // ── 3. Apply padding in page order using live positions ──
+  snapshots.forEach(({ kind, targetPage, getContentTop, marker, getMarkerTop, applyPadding }) => {
+    const actualTop     = getContentTop();                         // reflects prior padding
+    const needed        = targetPage * pageSlot + topMarginPx - actualTop;
+    const padding       = needed > 0 ? Math.round(needed) : 0;
+    const markerTop     = getMarkerTop();
+    if (marker && markerTop != null) {
+      const duplicateSectionMarker = kind === 'section' && scheduleMarkerPages.has(targetPage);
+      marker.style.visibility = duplicateSectionMarker ? 'hidden' : '';
+      const markerH = marker.getBoundingClientRect().height;
+      const pageGapTop = targetPage * pageSlot - 20;
+      const markerTargetTop = pageGapTop + ((20 - markerH) / 2);
+      marker.style.transform = `translateY(${Math.round(markerTargetTop - markerTop)}px)`;
+    }
+    applyPadding(padding);
+  });
+}
+</script>
+<script>
+// ============================================================
+// DOM RENDERING MODULE
+// ============================================================
+
+function renderSheet() {
+  renderHeader();
+  renderLogos();
+  renderSections();
+  applyTweaks();
+  renderDaySwitcher();
+  // After layout settles, auto-calculate page breaks for schedule sections
+  if (!_reflowing) requestAnimationFrame(autoReflow);
 }
 
 function renderHeader() {
@@ -1684,8 +2219,6 @@ function handleLogoAction(act, i) {
   }
 }
 
-// ---- SECTIONS ----
-
 function buildPageHeaderRepeat() {
   const m = state.meta;
   const el = document.createElement('div');
@@ -1756,97 +2289,6 @@ function renderSections() {
   host.querySelectorAll('[data-sec-act]').forEach(b =>
     b.addEventListener('click', () => sectionAction(b.dataset.secAct, b.dataset.secId))
   );
-}
-
-// Pushes after-break sections and schedule continuation pages to the correct
-// visual page boundary on screen (print uses break-before: page natively).
-//
-// All break points are measured together in the reset state, then paddings are
-// applied in visual order with a cumulative-shift tracker. This prevents a
-// compounding bug where setting padding N shifts break N+1 past a page
-// boundary, causing each subsequent margin to become ~one full page too tall.
-function adjustSectionBreakSpacing() {
-  const paper = document.getElementById('paper');
-  if (!paper) return;
-  const mmToPx      = 96 / 25.4;
-  const pageH       = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
-  const pageSlot    = pageH + 20; // page height + 20px visual gap
-  const topMarginPx = 26 * mmToPx; // screen preview: paper top padding + printable inset
-
-  // ── 1. Reset ALL dynamic paddings ──
-  document.querySelectorAll('.section.after-break').forEach(s => s.style.paddingTop = '');
-  document.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
-  document.querySelectorAll('.pbreak-marker, .sched-cont-wrap .brk-bar').forEach(el => {
-    el.style.transform = '';
-    el.style.visibility = '';
-  });
-
-  // Force synchronous reflow so subsequent getBCR calls are accurate
-  const paperTop = paper.getBoundingClientRect().top;
-
-  // ── 2. Snapshot every break point BEFORE any padding is applied ──
-  const sectionBreaks = Array.from(document.querySelectorAll('.section.after-break')).map(section => {
-    const top = section.getBoundingClientRect().top - paperTop;
-    const content = section.querySelector('.section-head') || section;
-    const marker = section.previousElementSibling?.classList.contains('pbreak-slot')
-      ? section.previousElementSibling.querySelector('.pbreak-marker')
-      : null;
-    return {
-      el: section,
-      kind: 'section',
-      refTop: top,
-      getContentTop: () => content.getBoundingClientRect().top - paperTop,
-      marker,
-      getMarkerTop: () => marker ? marker.getBoundingClientRect().top - paperTop : null,
-      applyPadding: px => { section.style.paddingTop = px > 0 ? `${px}px` : ''; },
-    };
-  });
-
-  const scheduleBreaks = Array.from(document.querySelectorAll('.sched-cont-content')).map(content => {
-    const bar    = content.closest('.sched-cont-wrap')?.querySelector('.brk-bar');
-    const refTop = bar
-      ? bar.getBoundingClientRect().top - paperTop
-      : content.getBoundingClientRect().top - paperTop;
-    return {
-      el: content,
-      kind: 'schedule',
-      refTop,
-      getContentTop: () => content.getBoundingClientRect().top - paperTop,
-      marker: bar,
-      getMarkerTop: () => bar ? bar.getBoundingClientRect().top - paperTop : null,
-      applyPadding: px => { content.style.paddingTop = px > 0 ? `${px}px` : ''; },
-    };
-  });
-
-  const snapshots = [...sectionBreaks, ...scheduleBreaks]
-    .sort((a, b) => a.refTop - b.refTop);
-  let nextTargetPage = 1;
-  snapshots.forEach(snapshot => {
-    snapshot.targetPage = Math.max(Math.ceil(snapshot.refTop / pageSlot), nextTargetPage);
-    nextTargetPage = snapshot.targetPage + 1;
-  });
-  const scheduleMarkerPages = new Set(
-    snapshots
-      .filter(snapshot => snapshot.kind === 'schedule' && snapshot.marker)
-      .map(snapshot => snapshot.targetPage)
-  );
-
-  // ── 3. Apply padding in page order using live positions ──
-  snapshots.forEach(({ kind, targetPage, getContentTop, marker, getMarkerTop, applyPadding }) => {
-    const actualTop     = getContentTop();                         // reflects prior padding
-    const needed        = targetPage * pageSlot + topMarginPx - actualTop;
-    const padding       = needed > 0 ? Math.round(needed) : 0;
-    const markerTop     = getMarkerTop();
-    if (marker && markerTop != null) {
-      const duplicateSectionMarker = kind === 'section' && scheduleMarkerPages.has(targetPage);
-      marker.style.visibility = duplicateSectionMarker ? 'hidden' : '';
-      const markerH = marker.getBoundingClientRect().height;
-      const pageGapTop = targetPage * pageSlot - 20;
-      const markerTargetTop = pageGapTop + ((20 - markerH) / 2);
-      marker.style.transform = `translateY(${Math.round(markerTargetTop - markerTop)}px)`;
-    }
-    applyPadding(padding);
-  });
 }
 
 function renderSection(sec, idx) {
@@ -2324,71 +2766,16 @@ function switchDay(id) {
   renderSheet();
   renderDaySwitcher();
 }
-
-function newDay() {
-  const choice = prompt('New day:\n  1 = Blank day\n  2 = Duplicate current day (schedule cleared)\n  3 = Duplicate current day (full copy)', '2');
-  if (!choice) return;
-  let d;
-  if (choice === '1') d = BLANK_DAY();
-  else if (choice === '2' || choice === '3') {
-    d = JSON.parse(JSON.stringify(state));
-    d.id = uid();
-    d.sections = d.sections.map(s => ({ ...s, id: uid(), data: Array.isArray(s.data) ? s.data.map(r => ({...r})) : {...s.data} }));
-    d.pageBreaks = [];
-    if (d.meta) d.meta.headerNote = '';
-    if (choice === '2') {
-      // clear schedule rows but keep everything else
-      d.sections.forEach(s => { if (s.type === 'schedule') s.data = []; });
-      if (d.meta) {
-        d.meta.date = '';
-        d.meta.day = String((parseInt(state.meta?.day) || 0) + 1 || '');
-      }
-    }
-  } else return;
-  store.days.push(d);
-  store.currentDayId = d.id;
-  state = currentDay();
-  save(); renderSheet(); renderDaySwitcher();
-}
-
-function deleteDay() {
-  if (store.days.length <= 1) { alert('Can\'t delete the last day.'); return; }
-  const label = (state.meta?.date || '').trim() || `Day ${state.meta?.day || ''}`;
-  if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
-  const i = store.days.findIndex(d => d.id === store.currentDayId);
-  store.days.splice(i, 1);
-  store.currentDayId = store.days[Math.max(0, i - 1)].id;
-  state = currentDay();
-  save(); renderSheet(); renderDaySwitcher();
-}
-
-function renameDay() {
-  const cur = state.meta?.date || '';
-  const next = prompt('Day label (date or short name):', cur);
-  if (next == null) return;
-  state.meta.date = next;
-  save(); renderSheet(); renderDaySwitcher();
-}
-
+</script>
+<script>
 // ============================================================
-// INTAKE TAB
+// Call Sheet — core application bootstrap
 // ============================================================
 
-let intakeDraft = null; // parsed JSON awaiting verify
+let _drag = null;      // shared drag-and-drop state
+let _reflowing = false; // prevents recursive autoReflow calls
 
-function initIntake() {
-  const btn = document.getElementById('intakeInterpret');
-  btn.addEventListener('click', runIntake);
-  document.getElementById('intakeCancel').addEventListener('click', resetIntake);
-  document.getElementById('intakePublish').addEventListener('click', publishIntake);
-  document.getElementById('intakeRetry').addEventListener('click', runIntake);
-  initApiKey();
-}
-
-// ---- Claude API key handling ----
-const API_KEY_STORAGE = 'callsheet.claudeApiKey';
-const API_MODEL_STORAGE = 'callsheet.claudeModel';
-
+// ---- API Keys ----
 function getApiKey() { try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch { return ''; } }
 function getApiModel() { try { return localStorage.getItem(API_MODEL_STORAGE) || 'claude-sonnet-4-5'; } catch { return 'claude-sonnet-4-5'; } }
 
@@ -2441,406 +2828,52 @@ function refreshApiKeyStatus() {
   }
 }
 
-async function completeWithClaude(userContent) {
-  const key = getApiKey();
-  if (key) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: getApiModel(),
-        max_tokens: 8000,
-        messages: [{ role: 'user', content: userContent }],
-      }),
-    });
-    if (!res.ok) {
-      let detail = '';
-      try { detail = (await res.json())?.error?.message || ''; } catch {}
-      throw new Error(`Claude API ${res.status}: ${detail || res.statusText}`);
-    }
-    const json = await res.json();
-    return (json.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+// ---- Intake Resizing ----
+function setIntakeWidth(width, persist = true) {
+  const px = Math.round(clamp(width, 200, 520));
+  document.documentElement.style.setProperty('--intake-w', `${px}px`);
+  if (persist) {
+    try { localStorage.setItem(INTAKE_WIDTH_KEY, String(px)); } catch {}
   }
-  // fall back to built-in helper (design environment)
-  if (!window.claude?.complete) {
-    throw new Error('No API key set and built-in Claude helper is not available. Save an API key in the panel below.');
-  }
-  return await window.claude.complete({
-    messages: [{ role: 'user', content: userContent }],
-  });
 }
 
-const INTAKE_SYSTEM = `You convert raw production text (messages, emails, notes; may be mixed English/Japanese) into a compact JSON call-sheet object. Keep output SHORT — omit any key whose value is empty. Use this shape:
+function initIntakeResize() {
+  const resizer = document.getElementById('intakeResizer');
+  const sidebar = document.getElementById('intakeSidebar');
+  if (!resizer || !sidebar) return;
 
-{ "meta": { "company"?, "address"?, "project"?, "client"?, "mainLocation"?, "date"?, "day"?, "shootCall"?, "emergency"?, "weatherCallout"?, "headerNote"?, "sunrise"?, "sunset"? },
-  "sections": [
-    { "type": "schedule", "title": "...", "data": [ { "type": "row", "time": "...", "dur": "...", "task": "...", "loc": "...", "cast": "...", "note": "..." }, { "type": "span", "time": "...", "text": "..." } ] },
-    { "type": "contacts", "title": "...", "data": [ { "role": "...", "name": "...", "phone": "..." } ] },
-    { "type": "equipment", "title": "...", "data": [ { "text": "...", "done": false } ] },
-    { "type": "hospital", "title": "...", "data": { "name": "...", "addr": "...", "phone": "...", "hours": "...", "dist": "..." } },
-    { "type": "basecamp", "title": "...", "data": { "name": "...", "addr": "...", "parking": "...", "restroom": "...", "catering": "..." } },
-    { "type": "notes", "title": "Notes", "data": { "text": "..." } }
-  ]
-}
-
-Rules: only include sections that have content. Inside each section, only include fields that are present. Anything that does not fit goes into a notes section. Return ONLY the JSON object — no markdown, no prose, no commentary.`;
-
-// Attempt to repair JSON that was truncated mid-output (Haiku 1024-token cap).
-// Strategy: close any open string, then close arrays/objects in reverse-stack order.
-function tryRepairJSON(s) {
-  s = s.trim();
-  // strip trailing comma / dangling key
-  s = s.replace(/,\s*$/, '');
-  const stack = [];
-  let inStr = false, escape = false;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (escape) { escape = false; continue; }
-    if (c === '\\') { escape = true; continue; }
-    if (c === '"') { inStr = !inStr; continue; }
-    if (inStr) continue;
-    if (c === '{' || c === '[') stack.push(c);
-    else if (c === '}' || c === ']') stack.pop();
-  }
-  if (inStr) s += '"';
-  // if we ended inside an incomplete key-value (e.g. "key": with no value)
-  s = s.replace(/,?\s*"[^"]*"\s*:\s*$/, '');
-  s = s.replace(/,\s*$/, '');
-  while (stack.length) {
-    const o = stack.pop();
-    s += (o === '{' ? '}' : ']');
-  }
-  return s;
-}
-
-async function runIntake() {
-  const txt = document.getElementById('intakeInput').value.trim();
-  if (!txt) { alert('Paste some text first.'); return; }
-  setIntakeStep('loading');
   try {
-    const raw = await completeWithClaude(
-      `${INTAKE_SYSTEM}\n\n--- INPUT START ---\n${txt}\n--- INPUT END ---`
-    );
-    const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
-    let parsed, repairedNote = '';
-    try {
-      parsed = JSON.parse(clean);
-    } catch (e1) {
-      const repaired = tryRepairJSON(clean);
-      try {
-        parsed = JSON.parse(repaired);
-        repairedNote = 'Output was truncated — some trailing content may be missing. Review carefully before publishing.';
-      } catch (e2) {
-        throw new Error('Could not parse model output. The response was likely truncated (Claude Haiku has a 1024-token output cap). Try pasting a smaller chunk, or break the input into parts. Original parse error: ' + e1.message);
-      }
-    }
-    intakeDraft = parsed;
-    renderIntakePreview(repairedNote);
-    setIntakeStep('verify');
-  } catch (e) {
-    document.getElementById('intakeError').textContent = e.message || String(e);
-    setIntakeStep('error');
-  }
-}
+    const stored = Number(localStorage.getItem(INTAKE_WIDTH_KEY));
+    if (stored) setIntakeWidth(stored, false);
+  } catch {}
 
-function setIntakeStep(step) {
-  ['input','loading','verify','error'].forEach(s =>
-    document.getElementById('intake-' + s).style.display = (s === step ? '' : 'none'));
-}
+  let startX = 0;
+  let startW = 0;
 
-function resetIntake() {
-  intakeDraft = null;
-  document.getElementById('intakeInput').value = '';
-  setIntakeStep('input');
-}
-
-function renderIntakePreview(note = '') {
-  const host = document.getElementById('intakePreview');
-  host.innerHTML = '';
-  if (note) {
-    const n = document.createElement('div');
-    n.style.cssText = 'background:#FFF3B0;border:1px solid #CBB04F;color:#5A4700;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:12px;';
-    n.textContent = note;
-    host.appendChild(n);
-  }
-
-  // META
-  const meta = intakeDraft.meta || {};
-  const curMeta = state.meta;
-  const metaTable = document.createElement('div');
-  metaTable.className = 'preview-block';
-  metaTable.innerHTML = `<h4>Header</h4><table class="pv"><tbody>${
-    Object.keys(meta).map(k => {
-      const v = meta[k] || '';
-      const changed = (v || '') !== (curMeta[k] || '');
-      return `<tr><td class="k">${esc(k)}</td><td class="v ${changed ? 'changed' : ''}" contenteditable="true" data-scope="meta" data-k="${esc(k)}">${esc(v)}</td></tr>`;
-    }).join('')
-  }</tbody></table>`;
-  host.appendChild(metaTable);
-
-  // SECTIONS
-  (intakeDraft.sections || []).forEach((sec, si) => {
-    const block = document.createElement('div');
-    block.className = 'preview-block';
-    block.innerHTML = `<h4>${esc(sec.title || sec.type)} <span class="tag">${esc(sec.type)}</span></h4>`;
-    if (Array.isArray(sec.data)) {
-      if (sec.data.length === 0) { block.innerHTML += '<p class="muted">(empty)</p>'; host.appendChild(block); return; }
-      const cols = Object.keys(sec.data[0]);
-      block.innerHTML += `<table class="pv"><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
-        sec.data.map((r, ri) => `<tr>${
-          cols.map(c => `<td class="v" contenteditable="true" data-scope="sec.row" data-si="${si}" data-ri="${ri}" data-c="${esc(c)}">${esc(r[c] != null ? r[c] : '')}</td>`).join('')
-        }</tr>`).join('')
-      }</tbody></table>`;
-    } else if (sec.data && typeof sec.data === 'object') {
-      const cols = Object.keys(sec.data);
-      block.innerHTML += `<table class="pv"><tbody>${
-        cols.map(c => `<tr><td class="k">${esc(c)}</td><td class="v" contenteditable="true" data-scope="sec.obj" data-si="${si}" data-c="${esc(c)}">${esc(sec.data[c] || '')}</td></tr>`).join('')
-      }</tbody></table>`;
-    }
-    host.appendChild(block);
-  });
-
-  // wire edits back into intakeDraft
-  host.querySelectorAll('[data-scope]').forEach(el => {
-    el.addEventListener('input', () => {
-      const s = el.dataset.scope;
-      if (s === 'meta') intakeDraft.meta[el.dataset.k] = el.textContent;
-      if (s === 'sec.row') intakeDraft.sections[+el.dataset.si].data[+el.dataset.ri][el.dataset.c] = el.textContent;
-      if (s === 'sec.obj') intakeDraft.sections[+el.dataset.si].data[el.dataset.c] = el.textContent;
-    });
-  });
-}
-
-function publishIntake() {
-  if (!intakeDraft) return;
-  // merge meta
-  Object.assign(state.meta, intakeDraft.meta || {});
-  // merge / replace sections: assign new uids and append to existing
-  if (Array.isArray(intakeDraft.sections) && intakeDraft.sections.length) {
-    const action = confirm('OK = Replace existing sections with interpreted ones.\nCancel = Append to existing sections.');
-    const fresh = intakeDraft.sections.map(s => ({ ...s, id: uid() }));
-    if (action) state.sections = fresh;
-    else state.sections.push(...fresh);
-  }
-  save();
-  switchTab('sheet');
-  renderSheet();
-  resetIntake();
-}
-
-// ============================================================
-// CSV EXPORT / IMPORT
-// ============================================================
-
-function csvEscape(s) {
-  s = s == null ? '' : String(s);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-}
-
-function dayToCSVLines(day) {
-  const lines = [];
-  lines.push('# META'); lines.push('key,value');
-  Object.entries(day.meta).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
-  lines.push('');
-  day.sections.forEach(sec => {
-    lines.push(`# ${sec.type.toUpperCase()} · ${sec.title}`);
-    if (Array.isArray(sec.data)) {
-      if (sec.data.length === 0) { lines.push(''); return; }
-      const cols = Object.keys(sec.data[0]);
-      lines.push(cols.join(','));
-      sec.data.forEach(r => lines.push(cols.map(c => csvEscape(r[c])).join(',')));
-    } else if (sec.data && typeof sec.data === 'object') {
-      lines.push('key,value');
-      Object.entries(sec.data).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
-    }
-    lines.push('');
-  });
-  return lines;
-}
-
-function exportCSV() {
-  // Ask scope: current day only, or all days concatenated
-  let scope = 'current';
-  if (store.days.length > 1) {
-    const choice = confirm(
-      `You have ${store.days.length} days.\n\n` +
-      `OK = Export ALL days (one file, split by "# DAY" markers)\n` +
-      `Cancel = Export current day only`
-    );
-    scope = choice ? 'all' : 'current';
-  }
-
-  const lines = [];
-  const daysToExport = scope === 'all' ? store.days : [state];
-  daysToExport.forEach((day, i) => {
-    const label = (day.meta?.date || `Day ${day.meta?.day || (i+1)}`).trim();
-    if (scope === 'all') {
-      lines.push(`# DAY · ${label}`);
-      lines.push('');
-    }
-    lines.push(...dayToCSVLines(day));
-  });
-
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `call-sheet-${(state.meta.date || 'export').replace(/[^\w.-]/g,'_')}.csv`;
-  a.click();
-}
-
-function importCSV() {
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = '.csv,text/csv';
-  inp.onchange = () => {
-    const f = inp.files[0]; if (!f) return;
-    const fr = new FileReader();
-    fr.onload = () => {
-      try {
-        const drafts = parseCSVtoDrafts(fr.result);
-        if (drafts.length === 0) { alert('No content found in CSV.'); return; }
-
-        if (drafts.length === 1) {
-          // Single day — go through the verify/preview flow
-          intakeDraft = drafts[0];
-          renderIntakePreview();
-          switchTab('intake');
-          setIntakeStep('verify');
-          return;
-        }
-
-        // Multi-day — create all days at once, after confirming
-        const action = confirm(
-          `This CSV contains ${drafts.length} days:\n\n` +
-          drafts.map((d, i) => `  ${i+1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
-          `\n\nOK   = Replace all existing days with these\n` +
-          `Cancel = Append these as new days (keep existing)`
-        );
-
-        const fresh = drafts.map(d => ({
-          id: uid(),
-          meta: d.meta || {},
-          logos: DEFAULT_DAY().logos,
-          pageBreaks: [],
-          sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
-        }));
-
-        if (action) {
-          store.days = fresh;
-        } else {
-          store.days.push(...fresh);
-        }
-        store.currentDayId = fresh[0].id;
-        state = currentDay();
-        save();
-        renderSheet();
-        renderDaySwitcher();
-        switchTab('sheet');
-      } catch (e) {
-        alert('CSV parse error: ' + e.message);
-      }
-    };
-    fr.readAsText(f);
+  const onMove = e => {
+    setIntakeWidth(startW + (e.clientX - startX));
   };
-  inp.click();
-}
-
-function parseCSV(txt) {
-  // tolerant CSV parser — quoted strings, escaped quotes
-  const rows = []; let row = []; let cur = ''; let q = false;
-  for (let i = 0; i < txt.length; i++) {
-    const ch = txt[i];
-    if (q) {
-      if (ch === '"' && txt[i+1] === '"') { cur += '"'; i++; }
-      else if (ch === '"') q = false;
-      else cur += ch;
-    } else {
-      if (ch === '"') q = true;
-      else if (ch === ',') { row.push(cur); cur = ''; }
-      else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
-      else if (ch === '\r') {}
-      else cur += ch;
-    }
-  }
-  if (cur.length || row.length) { row.push(cur); rows.push(row); }
-  return rows;
-}
-
-function parseCSVtoDrafts(txt) {
-  const rows = parseCSV(txt);
-  const drafts = [];
-  let draft = null;
-  let mode = null, header = null, cur = null;
-
-  const ensureDraft = () => {
-    if (!draft) { draft = { meta: {}, sections: [] }; drafts.push(draft); }
-    return draft;
+  const onUp = () => {
+    document.body.classList.remove('resizing-intake');
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
   };
 
-  for (const r of rows) {
-    if (r.length === 1 && r[0] === '') { mode = null; continue; }
-    const first = (r[0] || '').trim();
-
-    // DAY separator — starts a new day draft
-    if (first.startsWith('# DAY')) {
-      draft = { meta: {}, sections: [] };
-      drafts.push(draft);
-      mode = null; header = null; cur = null;
-      continue;
-    }
-    if (first.startsWith('# META')) { ensureDraft(); mode = 'meta'; continue; }
-    if (first.startsWith('# ')) {
-      // Only recognize known section types; treat anything else as a comment line.
-      const body = first.slice(2).trimStart();
-      const [typeRaw, ...titleParts] = body.split(' · ');
-      const type = typeRaw.trim().toLowerCase();
-      const VALID = ['schedule','contacts','equipment','hospital','basecamp','notes'];
-      if (!VALID.includes(type)) {
-        // comment — ignore but end any current section parse so stray keys don't
-        // leak into the last section's data
-        mode = null; cur = null; header = null;
-        continue;
-      }
-      ensureDraft();
-      const title = titleParts.join(' · ').trim();
-      cur = { id: uid(), type, title, data: ['hospital','basecamp','notes'].includes(type) ? {} : [] };
-      draft.sections.push(cur);
-      mode = 'sec'; header = null; continue;
-    }
-    if (mode === 'meta') {
-      if (r[0] === 'key' && r[1] === 'value') continue;
-      ensureDraft().meta[r[0]] = r[1];
-    } else if (mode === 'sec' && cur) {
-      if (!header) { header = r; continue; }
-      if (Array.isArray(cur.data)) {
-        const obj = {};
-        header.forEach((h, i) => obj[h] = r[i] || '');
-        if (cur.type === 'equipment' && 'done' in obj) obj.done = obj.done === 'true';
-        cur.data.push(obj);
-      } else {
-        cur.data[r[0]] = r[1];
-      }
-    }
-  }
-  return drafts;
-}
-
-// Legacy single-draft shim (still used by any callers)
-function parseCSVtoDraft(txt) {
-  const drafts = parseCSVtoDrafts(txt);
-  return drafts[0] || { meta: {}, sections: [] };
+  resizer.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = sidebar.getBoundingClientRect().width;
+    document.body.classList.add('resizing-intake');
+    resizer.setPointerCapture?.(e.pointerId);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { once: true });
+  });
 }
 
 // ============================================================
 // TABS + CHROME
 // ============================================================
-
 function switchTab(tab) {
-  // Panels are now always visible side-by-side; just trigger a sheet render if needed
   if (tab === 'sheet') renderSheet();
 }
 
@@ -2855,7 +2888,7 @@ function initChrome() {
   document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
   document.getElementById('btnImportCSV').addEventListener('click', importCSV);
   const bDel = document.getElementById('btnDelDay'); if (bDel) bDel.addEventListener('click', deleteDay);
-  const bDup = document.getElementById('btnDupDay'); if (bDup) bDup.addEventListener('click', newDay);
+  const bDupReal = document.getElementById('btnDupDay'); if (bDupReal) bDupReal.addEventListener('click', newDay);
 
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 

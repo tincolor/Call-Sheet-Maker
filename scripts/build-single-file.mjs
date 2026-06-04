@@ -32,10 +32,22 @@ export async function buildSingleFile() {
   let html = await mustRead('index.html');
   const css = await mustRead('styles.css');
   const logos = await mustRead('logos.inline.js');
+  const utils = await mustRead('src/utils.js');
+  const state = await mustRead('src/state.js');
+  const parser = await mustRead('src/parser.js');
+  const intake = await mustRead('src/intake.js');
+  const reflow = await mustRead('src/reflow.js');
+  const render = await mustRead('src/render.js');
   const app = await mustRead('app.js');
 
   html = inlineStyles(html, css);
   html = inlineScript(html, 'logos.inline.js', logos);
+  html = inlineScript(html, 'src/utils.js', utils);
+  html = inlineScript(html, 'src/state.js', state);
+  html = inlineScript(html, 'src/parser.js', parser);
+  html = inlineScript(html, 'src/intake.js', intake);
+  html = inlineScript(html, 'src/reflow.js', reflow);
+  html = inlineScript(html, 'src/render.js', render);
   html = inlineScript(html, 'app.js', app);
   return html;
 }

@@ -868,20 +868,20 @@
     /* CRITICAL: flex parents disable page-break/break-before on children.
        Switch layout containers to block for print so fragmentation works. */
     .page-wrap { display: block; padding: 0; }
-    .paper { display: block; box-shadow: none; width: var(--paper-w); min-height: var(--paper-h); margin: 0; padding: 12mm; }
+    .paper { display: block; box-shadow: none; width: var(--paper-w); min-height: var(--paper-h); margin: 0; padding: 14mm 12mm 16mm; }
     #sectionsHost { display: block; }
     #sectionsHost > .section { margin-bottom: 4mm; }
     a { color: inherit; }
     /* Force a hard page break before sections / schedule rows marked with a break. */
-    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; margin-bottom: 0; }
-    .section.after-break { break-before: page; page-break-before: always; padding-top: 12mm !important; }
+    .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 14mm !important; margin-bottom: 0; }
+    .section.after-break { break-before: page; page-break-before: always; padding-top: 14mm !important; }
     /* Hide all screen-only elements */
     .paper::after { display: none !important; }
     .sched-cont-wrap .brk-bar { display: none !important; }
     /* Match the first page's paper top padding on forced continuation pages. */
-    .sched-cont-content { padding-top: 12mm !important; }
+    .sched-cont-content { padding-top: 14mm !important; }
     /* Legacy row break — should not appear in new builds but kept for safety */
     table.sched tr.after-break-row { break-before: page; page-break-before: always; }
-    table.sched tr.after-break-row > td { padding-top: 12mm !important; }
+    table.sched tr.after-break-row > td { padding-top: 14mm !important; }
     [contenteditable="true"]:empty::before { content: ""; }
   }
