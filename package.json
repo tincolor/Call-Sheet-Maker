@@ -1,0 +1,9 @@
+{
+  "name": "call-sheet-maker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-single-file.mjs",
+    "check": "node scripts/smoke-test.mjs"
+  }
+}

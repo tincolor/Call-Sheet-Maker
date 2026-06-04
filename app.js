@@ -156,7 +156,7 @@ const BLANK_DAY = () => ({
 
 const DEFAULT_STORE = () => {
   const d = DEFAULT_DAY();
-  return { days: [d], currentDayId: d.id, tweaks: { showLogo: true, showPagePreview: false, paperSize: 'a4' } };
+  return { days: [d], currentDayId: d.id, tweaks: { showLogo: true, paperSize: 'a4' } };
 };
 
 // ---- load / save ----
@@ -248,8 +248,7 @@ function load() {
       const s = JSON.parse(raw);
       if (s && s.days && s.currentDayId) {
         s.days.forEach(fixupLogos);
-        if (!s.tweaks) s.tweaks = { showLogo: true, showPagePreview: false, paperSize: 'a4' };
-        if (!('showPagePreview' in s.tweaks)) s.tweaks.showPagePreview = false;
+        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4' };
         if (!('paperSize' in s.tweaks)) s.tweaks.paperSize = 'a4';
         return s;
       }
@@ -260,13 +259,14 @@ function load() {
       const s1 = JSON.parse(v1);
       const day = { id: uid(), meta: s1.meta || {}, logos: s1.logos || [], pageBreaks: s1.pageBreaks || [], sections: s1.sections || [] };
       fixupLogos(day);
-      return { days: [day], currentDayId: day.id, tweaks: { showLogo: true, showPagePreview: false, paperSize: 'a4', ...(s1.tweaks || {}) } };
+      return { days: [day], currentDayId: day.id, tweaks: { showLogo: true, paperSize: 'a4', ...(s1.tweaks || {}) } };
     }
   } catch(e) { console.warn('load fail', e); }
   return DEFAULT_STORE();
 }
 
-let _drag = null; // shared drag state for DnD
+let _drag = null;      // shared drag-and-drop state
+let _reflowing = false; // prevents recursive autoReflow calls
 
 let saveTimer;
 function save() {
@@ -342,6 +342,99 @@ function renderSheet() {
   renderSections();
   applyTweaks();
   renderDaySwitcher();
+  // After layout settles, auto-calculate page breaks for schedule sections
+  if (!_reflowing) requestAnimationFrame(autoReflow);
+}
+
+// ---- AUTO PAGE-BREAK REFLOW ----
+// Measures each schedule row's bottom position relative to the paper top.
+// For rows that fall past a page boundary, inserts an auto page-break marker.
+// Uses _reflowing to prevent infinite re-render loops.
+function autoReflow() {
+  if (_reflowing) return;
+  const paper = document.getElementById('paper');
+  if (!paper) return;
+
+  const mmToPx  = 96 / 25.4; // CSS pixels per mm (logical, not physical)
+  const pageHPx = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
+  const padBotPx = 16 * mmToPx;
+  const paperTop = paper.getBoundingClientRect().top;
+
+  const needed = []; // { sectionId, idx } breaks to insert
+
+  state.sections.forEach(sec => {
+    if (sec.type !== 'schedule') return;
+    const secEl = document.querySelector(`#sectionsHost .section[data-id="${sec.id}"]`);
+    if (!secEl) return;
+    const secBody = secEl.querySelector('.section-body');
+    if (!secBody) return;
+
+    // Walk children in DOM order: alternate between .sched-cont-wrap and table elements.
+    // .sched-cont-wrap adds screen height that doesn't exist in print (it becomes padding-top
+    // at the top of the new print page). Track this as extraScreenH so we can compute
+    // each row's logical print position.
+    let extraScreenH = 0;
+
+    Array.from(secBody.children).forEach(child => {
+      if (child.classList.contains('sched-cont-wrap')) {
+        extraScreenH += child.getBoundingClientRect().height;
+        return;
+      }
+      if (child.tagName !== 'TABLE') return;
+
+      Array.from(child.querySelectorAll('tbody tr')).forEach(tr => {
+        if (tr.classList.contains('sched-page-footer')) return;
+        const dataEl = tr.querySelector('[data-i]');
+        if (!dataEl) return;
+        const idx = +dataEl.dataset.i;
+        if (idx === 0) return; // never break before the very first row
+
+        // Logical bottom: screen position minus the extra height from cont-wrap divs
+        const logicalBottom = tr.getBoundingClientRect().bottom - extraScreenH - paperTop;
+        const pageNum  = Math.floor(logicalBottom / pageHPx);
+        const pageBotY = (pageNum + 1) * pageHPx - padBotPx;
+
+        if (logicalBottom > pageBotY) {
+          // Skip if the user has explicitly pinned this row as no-break
+          const pinned = state.noBreakPins && state.noBreakPins.some(p => p.sectionId === sec.id && p.idx === idx);
+          if (!pinned) needed.push({ sectionId: sec.id, idx });
+        }
+      });
+    });
+  });
+
+  // Deduplicate (keep only unique sectionId:idx pairs)
+  const seen = new Set();
+  const neededUniq = needed.filter(b => {
+    const k = `${b.sectionId}:${b.idx}`;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  // Compare with current auto-breaks
+  const curAuto = state.pageBreaks
+    .filter(b => b.auto && b.beforeRow)
+    .map(b => `${b.beforeRow.sectionId}:${b.beforeRow.idx}`)
+    .sort()
+    .join(',');
+  const wantAuto = neededUniq
+    .map(b => `${b.sectionId}:${b.idx}`)
+    .sort()
+    .join(',');
+
+  if (curAuto !== wantAuto) {
+    _reflowing = true;
+    state.pageBreaks = state.pageBreaks.filter(b => !b.auto);
+    neededUniq.forEach(b =>
+      state.pageBreaks.push({ beforeRow: { sectionId: b.sectionId, idx: b.idx }, auto: true })
+    );
+    renderSections();
+    // Allow a second pass after layout settles, then push continuations to page boundaries
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      _reflowing = false;
+      adjustSectionBreakSpacing();
+    }));
+  }
 }
 
 function renderHeader() {
@@ -436,6 +529,54 @@ function handleLogoAction(act, i) {
 
 // ---- SECTIONS ----
 
+function buildPageHeaderRepeat() {
+  const m = state.meta;
+  const el = document.createElement('div');
+  el.className = 'page-header-repeat';
+  el.innerHTML = `
+    <div class="hd">
+      <div class="hd-company">
+        <div class="name">${esc(m.company || '')}</div>
+        <div class="addr">${esc(m.address || '')}</div>
+        <div style="flex:1"></div>
+        <div class="hd-crew">
+          ${m['crew.lp']      ? `<div><span class="role">Producer :</span><span>${esc(m['crew.lp'])}</span></div>` : ''}
+          ${m['crew.usprod']  ? `<div><span class="role">US Producer :</span><span>${esc(m['crew.usprod'])}</span></div>` : ''}
+          ${m['crew.director']? `<div><span class="role">Director :</span><span>${esc(m['crew.director'])}</span></div>` : ''}
+          ${m['crew.dop']     ? `<div><span class="role">DOP :</span><span>${esc(m['crew.dop'])}</span></div>` : ''}
+        </div>
+      </div>
+      <div class="hd-crew" style="display:flex;flex-direction:column;gap:10px;padding:10px 12px;">
+        <div><div class="lbl">Project</div><div style="font-weight:700;margin-top:3px;font-size:15px;letter-spacing:-0.01em;">${esc(m.project || '')}</div></div>
+        <div><div class="lbl">Client</div><div style="margin-top:2px;font-weight:500;">${esc(m.client || '')}</div></div>
+        <div><div class="lbl">Location</div><div style="margin-top:2px;">${esc(m.mainLocation || '')}</div></div>
+      </div>
+      <div class="hd-title">
+        <div class="title-row">CALL SHEET</div>
+        <div class="kv"><div class="k">Date</div><div class="v">${esc(m.date || '')}</div></div>
+        <div class="kv"><div class="k">Day</div><div class="v">${esc(m.day || '')}</div></div>
+        <div class="shoot-call">
+          <span class="lbl">Shoot Call</span>
+          <span class="time">${esc(m.shootCall || '')}</span>
+          ${m.headerNote ? `<div class="header-note">${esc(m.headerNote)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="hd2">
+      <div class="emergency">
+        <div class="lbl">Emergency</div>
+        <div class="v">${esc(m.emergency || '')}</div>
+      </div>
+      <div class="weather">${esc(m.weatherCallout || '')}</div>
+      <div class="sun">
+        <span><span class="k">↑</span> ${esc(m.sunrise || '')}</span>
+        <span><span class="k">↓</span> ${esc(m.sunset || '')}</span>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
 function renderSections() {
   const host = document.getElementById('sectionsHost');
   host.innerHTML = '';
@@ -444,14 +585,75 @@ function renderSections() {
   host.appendChild(pageBreakSlot({ before: state.sections[0]?.id || '__end__' }, 0));
 
   state.sections.forEach((sec, idx) => {
-    host.appendChild(renderSection(sec, idx));
+    const secEl = renderSection(sec, idx);
+    // after-break stays on the section; adjustSectionBreakSpacing() pushes it to
+    // the correct page boundary on screen. Print uses break-before: page directly.
+    host.appendChild(secEl);
     const nextId = state.sections[idx + 1]?.id || '__end__';
     host.appendChild(pageBreakSlot({ before: nextId }, idx + 1));
   });
 
+  // Push after-break sections to the right page boundary in the screen preview
+  requestAnimationFrame(adjustSectionBreakSpacing);
+
   host.querySelectorAll('[data-sec-act]').forEach(b =>
     b.addEventListener('click', () => sectionAction(b.dataset.secAct, b.dataset.secId))
   );
+}
+
+// Pushes after-break sections and schedule continuation pages to the correct
+// visual page boundary on screen (print uses break-before: page natively).
+//
+// Schedule continuations are measured all-at-once in the reset state, then
+// paddings are applied sequentially with a cumulative-shift tracker. This
+// prevents a compounding bug where setting padding N shifts bar N+1 past a
+// page boundary, causing each subsequent margin to be ~one full page too tall.
+function adjustSectionBreakSpacing() {
+  const paper = document.getElementById('paper');
+  if (!paper) return;
+  const mmToPx      = 96 / 25.4;
+  const pageH       = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
+  const pageSlot    = pageH + 20; // page height + 20px visual gap
+  const topMarginPx = 14 * mmToPx; // matches .paper { padding-top: 14mm }
+
+  // ── 1. Reset ALL dynamic paddings ──
+  document.querySelectorAll('.section.after-break').forEach(s => s.style.paddingTop = '');
+  document.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
+
+  // Force synchronous reflow so subsequent getBCR calls are accurate
+  const paperTop = paper.getBoundingClientRect().top;
+
+  // ── 2. Section page breaks (sequential: each measurement reflects prior sets) ──
+  document.querySelectorAll('.section.after-break').forEach(sec => {
+    const secTop = sec.getBoundingClientRect().top - paperTop;
+    const curPage = Math.floor(secTop / pageSlot);
+    const needed  = (curPage + 1) * pageSlot + topMarginPx - secTop;
+    if (needed > 0) sec.style.paddingTop = Math.round(needed) + 'px';
+  });
+
+  // ── 3. Schedule continuation pages ──
+  // Snapshot bar & content positions in reset state BEFORE any padding is applied.
+  // Setting padding N shifts bar N+1; if that shift crosses a page boundary,
+  // Math.ceil gives the wrong target page. Using reset-state refs + a cumulative
+  // offset avoids the drift entirely.
+  const contEls = Array.from(document.querySelectorAll('.sched-cont-content'));
+  const snapshots = contEls.map(content => {
+    const bar    = content.closest('.sched-cont-wrap')?.querySelector('.brk-bar');
+    const refTop = bar
+      ? bar.getBoundingClientRect().top - paperTop
+      : content.getBoundingClientRect().top - paperTop;
+    return { content, refTop, contentTop: content.getBoundingClientRect().top - paperTop };
+  });
+
+  let shift = 0; // running total of padding added by previous continuations
+  snapshots.forEach(({ content, refTop, contentTop }) => {
+    const targetPage    = Math.ceil(refTop / pageSlot);          // from reset-state bar
+    const actualTop     = contentTop + shift;                     // true current position
+    const needed        = targetPage * pageSlot + topMarginPx - actualTop;
+    const padding       = needed > 0 ? Math.round(needed) : 0;
+    if (padding > 0) content.style.paddingTop = padding + 'px';
+    shift += padding;
+  });
 }
 
 function renderSection(sec, idx) {
@@ -480,10 +682,16 @@ function renderSection(sec, idx) {
     <div class="section-body"></div>
   `;
 
+  const titleEl = el.querySelector('.title');
+  titleEl.addEventListener('blur', () => { sec.title = titleEl.textContent; save(); });
+
   // section drag-and-drop
   const dragHandle = el.querySelector('.sec-drag-handle');
   dragHandle.addEventListener('mousedown', () => { el.draggable = true; });
-  el.addEventListener('dragend', () => { el.draggable = false; el.classList.remove('dragging'); _drag = null; document.querySelectorAll('.section.drag-over').forEach(e => e.classList.remove('drag-over')); });
+  el.addEventListener('dragend', () => {
+    el.draggable = false; el.classList.remove('dragging'); _drag = null;
+    document.querySelectorAll('.section.drag-over').forEach(s => s.classList.remove('drag-over'));
+  });
   el.addEventListener('dragstart', e => {
     if (!el.draggable) { e.preventDefault(); return; }
     _drag = { type: 'section', id: sec.id };
@@ -498,8 +706,7 @@ function renderSection(sec, idx) {
     el.classList.add('drag-over');
   });
   el.addEventListener('drop', e => {
-    e.preventDefault();
-    el.classList.remove('drag-over');
+    e.preventDefault(); el.classList.remove('drag-over');
     if (!_drag || _drag.type !== 'section') return;
     const fromIdx = state.sections.findIndex(s => s.id === _drag.id);
     const toIdx   = state.sections.findIndex(s => s.id === sec.id);
@@ -510,8 +717,11 @@ function renderSection(sec, idx) {
     save(); renderSections();
   });
 
-  const titleEl = el.querySelector('.title');
-  titleEl.addEventListener('blur', () => { sec.title = titleEl.textContent; save(); });
+  // If this schedule section has any row-level page breaks, allow break-inside
+  if (sec.type === 'schedule') {
+    const hasRowBreaks = state.pageBreaks.some(b => b.beforeRow && b.beforeRow.sectionId === sec.id);
+    if (hasRowBreaks) el.classList.add('has-row-break');
+  }
 
   const body = el.querySelector('.section-body');
   if (sec.type === 'schedule')   renderSchedule(sec, body);
@@ -556,145 +766,190 @@ function sectionAction(act, id) {
 
 // ---- SCHEDULE ----
 function renderSchedule(sec, host) {
-  host.innerHTML = `
-    <table class="sched">
-      <thead><tr>
-        <th class="time">Time</th>
-        <th class="task">Task</th>
-        <th class="loc">Location</th>
-        <th class="cast">Cast / Extras</th>
-        <th class="note">Notes</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="add-row">
-      <button data-act="addRow">+ Add row</button>
-      <button data-act="addSpan">+ Add spanning row (travel / wrap)</button>
-    </div>
-  `;
-  const tb = host.querySelector('tbody');
+  host.innerHTML = '';
 
-  // need row-level page breaks; walk with interleaved break slots
-  const renderRow = (r, i) => {
-    const tr = document.createElement('tr');
-    const brk = state.pageBreaks.find(p => p.beforeRow && p.beforeRow.sectionId === sec.id && p.beforeRow.idx === i);
-    if (brk) tr.classList.add('after-break-row');
-    if (r.type === 'span') {
-      tr.className += ' span';
-      tr.innerHTML = `
-        <td class="time">
-          <div class="row-controls">
-            <button class="drag-handle row-drag-handle" title="Drag to reorder">⠿</button>
-            <button data-act="up" data-i="${i}">↑</button>
-            <button data-act="down" data-i="${i}">↓</button>
-            <button data-act="brk" data-i="${i}" title="Page break before">⤓</button>
-            <button data-act="del" data-i="${i}">×</button>
-          </div>
-          <span contenteditable="true" data-f="time" data-i="${i}">${esc(r.time)}</span>
-          <span class="dur" contenteditable="true" data-f="dur" data-i="${i}">${esc(r.dur)}</span>
-        </td>
-        <td class="spanned" colspan="4" contenteditable="true" data-f="text" data-i="${i}"><b>${esc(r.text || '')}</b></td>
-      `;
-    } else {
-      tr.innerHTML = `
-        <td class="time">
-          <div class="row-controls">
-            <button class="drag-handle row-drag-handle" title="Drag to reorder">⠿</button>
-            <button data-act="up" data-i="${i}">↑</button>
-            <button data-act="down" data-i="${i}">↓</button>
-            <button data-act="brk" data-i="${i}" title="Page break before">⤓</button>
-            <button data-act="del" data-i="${i}">×</button>
-          </div>
-          <span contenteditable="true" data-f="time" data-i="${i}" data-placeholder="00:00">${esc(r.time)}</span>
-          <span class="dur" contenteditable="true" data-f="dur" data-i="${i}" data-placeholder="dur">${esc(r.dur)}</span>
-        </td>
-        <td class="task" contenteditable="true" data-f="task" data-i="${i}" data-placeholder="Task">${esc(r.task)}</td>
-        <td class="loc" contenteditable="true" data-f="loc" data-i="${i}" data-placeholder="Location / address">${esc(r.loc)}</td>
-        <td class="cast" contenteditable="true" data-f="cast" data-i="${i}" data-placeholder="Cast / extras">${esc(r.cast)}</td>
-        <td class="note" contenteditable="true" data-f="note" data-i="${i}" data-placeholder="Notes">${esc(r.note)}</td>
-      `;
-    }
-    // wire row drag-and-drop
-    const dh = tr.querySelector('.row-drag-handle');
-    if (dh) {
-      dh.addEventListener('mousedown', () => { tr.draggable = true; });
-      tr.addEventListener('dragstart', e => {
-        if (!tr.draggable) { e.preventDefault(); return; }
-        _drag = { type: 'row', secId: sec.id, idx: i };
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(i));
-        tr.classList.add('dragging');
-      });
-      tr.addEventListener('dragend', () => {
-        tr.draggable = false; tr.classList.remove('dragging');
-        tb.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
-      });
-      tr.addEventListener('dragover', e => {
-        if (_drag?.type !== 'row' || _drag.secId !== sec.id) return;
-        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
-        tb.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
-        tr.classList.add('drag-over');
-      });
-      tr.addEventListener('drop', e => {
-        e.preventDefault(); tr.classList.remove('drag-over');
-        if (!_drag || _drag.type !== 'row' || _drag.secId !== sec.id) return;
-        const from = _drag.idx, to = i; _drag = null;
-        if (from === to) return;
-        const [moved] = sec.data.splice(from, 1);
-        sec.data.splice(to, 0, moved);
-        recalculateScheduleTimes(sec, Math.min(from, to));
+  // Split data into segments at every page-break point
+  const brkIdxs = state.pageBreaks
+    .filter(b => b.beforeRow && b.beforeRow.sectionId === sec.id)
+    .map(b => b.beforeRow.idx)
+    .sort((a, b) => a - b);
+
+  const segs = [];
+  let from = 0;
+  for (const bi of brkIdxs) { segs.push({ rows: sec.data.slice(from, bi), start: from }); from = bi; }
+  segs.push({ rows: sec.data.slice(from), start: from });
+
+  const THEAD = `<thead><tr>
+    <th class="time">Time</th><th class="task">Task</th>
+    <th class="loc">Location</th><th class="cast">Cast / Extras</th>
+    <th class="note">Notes</th>
+  </tr></thead>`;
+
+  segs.forEach((seg, segIdx) => {
+    const isLast = segIdx === segs.length - 1;
+
+    // Between segments: page-break wrapper with white space + "Continued" heading
+    if (segIdx > 0) {
+      const breakRowIdx = seg.start;
+      const isAuto = !!state.pageBreaks.find(b => b.auto && b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx);
+      const wrap = document.createElement('div');
+      wrap.className = 'sched-cont-wrap';
+      // Screen-only bar — built via DOM so the Remove button keeps its listener
+      const bar = document.createElement('div');
+      bar.className = 'brk-bar';
+      const barLabel = document.createElement('span');
+      barLabel.textContent = isAuto ? 'Page Break (auto)' : 'Page Break';
+      const rmBtn = document.createElement('button');
+      rmBtn.className = 'brk-remove';
+      rmBtn.textContent = 'Remove';
+      rmBtn.addEventListener('click', () => {
+        state.pageBreaks = state.pageBreaks.filter(b =>
+          !(b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx)
+        );
+        if (isAuto) {
+          // Pin this row so autoReflow won't re-insert the break immediately
+          if (!state.noBreakPins) state.noBreakPins = [];
+          if (!state.noBreakPins.some(p => p.sectionId === sec.id && p.idx === breakRowIdx))
+            state.noBreakPins.push({ sectionId: sec.id, idx: breakRowIdx });
+        }
         save(); renderSections();
       });
+      bar.appendChild(barLabel);
+      bar.appendChild(rmBtn);
+      const content = document.createElement('div');
+      content.className = 'sched-cont-content';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'sched-cont-title';
+      titleEl.textContent = sec.title;
+      const subEl = document.createElement('div');
+      subEl.className = 'sched-cont-subtitle';
+      subEl.textContent = 'Continued from previous page.';
+      content.appendChild(titleEl);
+      content.appendChild(subEl);
+      wrap.appendChild(bar);    // bar sits at the break boundary, before the white space
+      wrap.appendChild(content); // content has the padding-top white space
+      host.appendChild(wrap);
     }
-    return tr;
-  };
 
-  sec.data.forEach((r, i) => tb.appendChild(renderRow(r, i)));
+    // Table for this segment
+    const tbl = document.createElement('table');
+    tbl.className = 'sched';
+    tbl.innerHTML = THEAD + '<tbody></tbody>';
+    const tb = tbl.querySelector('tbody');
 
-  tb.querySelectorAll('[data-f]').forEach(el => {
-    el.addEventListener('input', () => {
-      const i = +el.dataset.i, f = el.dataset.f;
-      sec.data[i][f] = el.textContent;
-      if (f === 'time' || f === 'dur') {
-        recalculateScheduleTimes(sec, i + 1);
-        syncScheduleTimeCells(tb, sec, i + 1);
+    seg.rows.forEach((r, li) => {
+      const gi = seg.start + li; // global index into sec.data
+      const tr = document.createElement('tr');
+      const rc = `<button class="drag-handle row-drag-handle" title="Drag to reorder">⠿</button><button data-act="up" data-i="${gi}">↑</button><button data-act="down" data-i="${gi}">↓</button><button data-act="brk" data-i="${gi}" title="Page break before">⤓</button><button data-act="del" data-i="${gi}">×</button>`;
+      if (r.type === 'span') {
+        tr.className = 'span';
+        tr.innerHTML = `<td class="time"><div class="row-controls">${rc}</div>
+          <span contenteditable="true" data-f="time" data-i="${gi}">${esc(r.time)}</span>
+          <span class="dur" contenteditable="true" data-f="dur" data-i="${gi}">${esc(r.dur)}</span></td>
+          <td class="spanned" colspan="4" contenteditable="true" data-f="text" data-i="${gi}"><b>${esc(r.text||'')}</b></td>`;
+      } else {
+        tr.innerHTML = `<td class="time"><div class="row-controls">${rc}</div>
+          <span contenteditable="true" data-f="time" data-i="${gi}" data-placeholder="00:00">${esc(r.time)}</span>
+          <span class="dur" contenteditable="true" data-f="dur" data-i="${gi}" data-placeholder="dur">${esc(r.dur)}</span></td>
+          <td class="task" contenteditable="true" data-f="task" data-i="${gi}" data-placeholder="Task">${esc(r.task)}</td>
+          <td class="loc"  contenteditable="true" data-f="loc"  data-i="${gi}" data-placeholder="Location / address">${esc(r.loc)}</td>
+          <td class="cast" contenteditable="true" data-f="cast" data-i="${gi}" data-placeholder="Cast / extras">${esc(r.cast)}</td>
+          <td class="note" contenteditable="true" data-f="note" data-i="${gi}" data-placeholder="Notes">${esc(r.note)}</td>`;
       }
-      save();
+      // Drag-and-drop
+      const dh = tr.querySelector('.row-drag-handle');
+      if (dh) {
+        dh.addEventListener('mousedown', () => { tr.draggable = true; });
+        tr.addEventListener('dragstart', e => {
+          if (!tr.draggable) { e.preventDefault(); return; }
+          _drag = { type: 'row', secId: sec.id, idx: gi };
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(gi));
+          tr.classList.add('dragging');
+        });
+        tr.addEventListener('dragend', () => {
+          tr.draggable = false; tr.classList.remove('dragging');
+          host.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+        });
+        tr.addEventListener('dragover', e => {
+          if (_drag?.type !== 'row' || _drag.secId !== sec.id) return;
+          e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+          host.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+          tr.classList.add('drag-over');
+        });
+        tr.addEventListener('drop', e => {
+          e.preventDefault(); tr.classList.remove('drag-over');
+          if (!_drag || _drag.type !== 'row' || _drag.secId !== sec.id) return;
+          const f2 = _drag.idx, t2 = gi; _drag = null;
+          if (f2 === t2) return;
+          const [mv] = sec.data.splice(f2, 1); sec.data.splice(t2, 0, mv);
+          recalculateScheduleTimes(sec, Math.min(f2, t2));
+          save(); renderSections();
+        });
+      }
+      tb.appendChild(tr);
+    });
+
+    // "Continued on next page." footer for non-last segments
+    if (!isLast) {
+      const ft = document.createElement('tr');
+      ft.className = 'sched-page-footer';
+      ft.innerHTML = `<td colspan="5">Continued on next page.</td>`;
+      tb.appendChild(ft);
+    }
+
+    host.appendChild(tbl);
+
+    // Wire contenteditable input events
+    tbl.querySelectorAll('[data-f]').forEach(el => {
+      el.addEventListener('input', () => {
+        const ii = +el.dataset.i, f = el.dataset.f;
+        sec.data[ii][f] = el.textContent;
+        if (f === 'time' || f === 'dur') {
+          recalculateScheduleTimes(sec, ii + 1);
+          // Sync time cells across all table segments
+          host.querySelectorAll('[data-f="time"]').forEach(ce => {
+            const ci = +ce.dataset.i;
+            if (ci >= ii + 1 && sec.data[ci]) ce.textContent = sec.data[ci].time || '';
+          });
+        }
+        save();
+      });
+    });
+
+    // Wire button click events
+    tbl.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ii = +btn.dataset.i, act = btn.dataset.act;
+        if (act === 'up' && ii > 0) { const [r] = sec.data.splice(ii, 1); sec.data.splice(ii-1, 0, r); recalculateScheduleTimes(sec, ii); }
+        if (act === 'down' && ii < sec.data.length-1) { const [r] = sec.data.splice(ii, 1); sec.data.splice(ii+1, 0, r); recalculateScheduleTimes(sec, ii); }
+        if (act === 'del') {
+          if (!confirmDel('Delete row?')) return;
+          sec.data.splice(ii, 1);
+          state.pageBreaks = state.pageBreaks.filter(p => !(p.beforeRow && p.beforeRow.sectionId === sec.id && p.beforeRow.idx === ii));
+          recalculateScheduleTimes(sec, ii);
+        }
+        if (act === 'brk') { togglePageBreakRow(sec.id, ii); }
+        save(); renderSections();
+      });
     });
   });
-  tb.querySelectorAll('[data-act]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const i = +btn.dataset.i, act = btn.dataset.act;
-      if (act === 'up' && i > 0) {
-        const [r] = sec.data.splice(i, 1);
-        sec.data.splice(i - 1, 0, r);
-        recalculateScheduleTimes(sec, i);
-      }
-      if (act === 'down' && i < sec.data.length - 1) {
-        const [r] = sec.data.splice(i, 1);
-        sec.data.splice(i + 1, 0, r);
-        recalculateScheduleTimes(sec, i);
-      }
-      if (act === 'del') {
-        if (!confirmDel('Delete row?')) return;
-        sec.data.splice(i, 1);
-        state.pageBreaks = state.pageBreaks.filter(p => !(p.beforeRow && p.beforeRow.sectionId === sec.id && p.beforeRow.idx === i));
-        recalculateScheduleTimes(sec, i);
-      }
-      if (act === 'brk') { togglePageBreakRow(sec.id, i); }
-      save(); renderSections();
-    });
-  });
-  host.querySelector('[data-act="addRow"]').addEventListener('click', () => {
+
+  // Add row / add span buttons (after all segments)
+  const addDiv = document.createElement('div');
+  addDiv.className = 'add-row';
+  addDiv.innerHTML = `<button data-act="addRow">+ Add row</button><button data-act="addSpan">+ Add spanning row (travel / wrap)</button>`;
+  addDiv.querySelector('[data-act="addRow"]').addEventListener('click', () => {
     sec.data.push({ type:'row', time:'', dur:'', task:'', loc:'', cast:'', note:'' });
     recalculateScheduleTimes(sec, sec.data.length - 1);
     save(); renderSections();
   });
-  host.querySelector('[data-act="addSpan"]').addEventListener('click', () => {
+  addDiv.querySelector('[data-act="addSpan"]').addEventListener('click', () => {
     sec.data.push({ type:'span', time:'', dur:'', text:'' });
     recalculateScheduleTimes(sec, sec.data.length - 1);
     save(); renderSections();
   });
+  host.appendChild(addDiv);
 }
 
 // ---- CONTACTS ----
@@ -822,7 +1077,6 @@ function togglePageBreakRow(sectionId, idx) {
 function applyTweaks() {
   document.body.classList.add('hide-jp'); // JP labels always hidden
   document.body.classList.toggle('hide-logo', !store.tweaks.showLogo);
-  document.body.classList.toggle('page-preview', !!store.tweaks.showPagePreview);
   // paper size
   const isLetter = store.tweaks.paperSize === 'letter';
   document.body.classList.toggle('paper-letter', isLetter);
@@ -837,7 +1091,7 @@ function applyTweaks() {
   const btnLetter = document.getElementById('btnSizeLetter');
   if (btnA4) btnA4.classList.toggle('active', !isLetter);
   if (btnLetter) btnLetter.classList.toggle('active', isLetter);
-  // toggles
+  // other toggles
   document.querySelectorAll('[data-tweak]').forEach(el => {
     const k = el.dataset.tweak;
     if (el.classList.contains('toggle')) el.classList.toggle('on', !!store.tweaks[k]);
@@ -1021,7 +1275,7 @@ async function completeWithClaude(userContent) {
   }
   // fall back to built-in helper (design environment)
   if (!window.claude?.complete) {
-    throw new Error('No Claude API key saved. Open the "API Key" panel below, paste your key from console.anthropic.com, and click Save — then try again.');
+    throw new Error('No API key set and built-in Claude helper is not available. Save an API key in the panel below.');
   }
   return await window.claude.complete({
     messages: [{ role: 'user', content: userContent }],
@@ -1393,15 +1647,11 @@ function parseCSVtoDraft(txt) {
 // ============================================================
 
 function switchTab(tab) {
-  document.querySelectorAll('[data-tab]').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
-  document.querySelectorAll('[data-tab-panel]').forEach(el => el.style.display = el.dataset.tabPanel === tab ? '' : 'none');
+  // Panels are now always visible side-by-side; just trigger a sheet render if needed
   if (tab === 'sheet') renderSheet();
 }
 
 function initChrome() {
-  document.getElementById('btnEdit').addEventListener('click', () => {
-    document.body.classList.toggle('editing');
-  });
   document.getElementById('btnPrint').addEventListener('click', () => window.print());
   document.getElementById('btnReset').addEventListener('click', () => {
     if (!confirm('Wipe ALL days and start fresh? (Cannot undo.)')) return;
@@ -1411,17 +1661,6 @@ function initChrome() {
   });
   document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
   document.getElementById('btnImportCSV').addEventListener('click', importCSV);
-  const bPreview = document.getElementById('btnPagePreview');
-  if (bPreview) {
-    const syncPreview = () => bPreview.classList.toggle('primary', !!store.tweaks.showPagePreview);
-    bPreview.addEventListener('click', () => {
-      store.tweaks.showPagePreview = !store.tweaks.showPagePreview;
-      save();
-      applyTweaks();
-      syncPreview();
-    });
-    syncPreview();
-  }
   const bDel = document.getElementById('btnDelDay'); if (bDel) bDel.addEventListener('click', deleteDay);
   const bDup = document.getElementById('btnDupDay'); if (bDup) bDup.addEventListener('click', newDay);
 
@@ -1447,6 +1686,19 @@ function initChrome() {
   const bLetter = document.getElementById('btnSizeLetter');
   if (bA4) bA4.addEventListener('click', () => { store.tweaks.paperSize = 'a4'; save(); applyTweaks(); });
   if (bLetter) bLetter.addEventListener('click', () => { store.tweaks.paperSize = 'letter'; save(); applyTweaks(); });
+
+  // section spacing slider
+  const gapSlider = document.getElementById('gapSlider');
+  const gapVal = document.getElementById('gapVal');
+  if (gapSlider) {
+    const applyGap = () => {
+      const v = gapSlider.value;
+      document.getElementById('sectionsHost').style.setProperty('--section-gap', v + 'mm');
+      document.documentElement.style.setProperty('--section-gap', v + 'mm');
+      if (gapVal) gapVal.textContent = v + 'mm';
+    };
+    gapSlider.addEventListener('input', applyGap);
+  }
 }
 
 // ---- BOOT ----
@@ -1455,7 +1707,7 @@ function boot() {
   initChrome();
   initIntake();
   renderDaySwitcher();
-  switchTab('sheet');
+  renderSheet(); // renders header + sections + applies tweaks (incl. paper size)
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', boot);
