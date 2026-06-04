@@ -15,10 +15,12 @@
 - Mocking minimal DOM globals in Node.js test environments (`smoke-test.mjs`) to test module parsing safely.
 - Renaming entry points containing JSX syntax to `.jsx` so Rolldown/Vite parses them correctly.
 - Using `useLayoutEffect` to trigger imperative DOM reflow side-effects (`adjustSectionBreakSpacing`) after Preact renders.
+- Using Preact's `<Fragment>` to map items in loops, ensuring DOM tree queries like `previousElementSibling` continue to resolve correct siblings.
 
 ## Patterns That Don't Work
 - Leaving raw non-module scripts like `<script src="logos.inline.js"></script>` in Vite projects if they must be inlined; Vite won't bundle them without `type="module"`.
 - Calling Node `--check` syntax checks on `.jsx` files as Node does not natively support JSX.
+- Using `div style={{ display: 'contents' }}` as a JSX list loop wrapper when DOM methods like `previousElementSibling` are used to target adjacent elements; the div is still present in the DOM tree and interrupts sibling lookups.
 
 ## Domain Notes
 - Call Sheet Maker is a standalone browser app for production call sheets

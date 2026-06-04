@@ -1,3 +1,4 @@
+import { Fragment } from 'preact';
 import { useRef, useLayoutEffect } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { app, save } from '../store.js';
@@ -26,10 +27,10 @@ export function Sections() {
     <div>
       <PageBreakSlot before={sections[0]?.id || '__end__'} />
       {sections.map((sec, idx) => (
-        <div key={sec.id} style={{ display: 'contents' }}>
+        <Fragment key={sec.id}>
           <Section sec={sec} idx={idx} />
           <PageBreakSlot before={sections[idx + 1]?.id || '__end__'} />
-        </div>
+        </Fragment>
       ))}
     </div>
   );
