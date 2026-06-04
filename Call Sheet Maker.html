@@ -1717,7 +1717,7 @@ function adjustSectionBreakSpacing() {
   const mmToPx      = 96 / 25.4;
   const pageH       = (store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
   const pageSlot    = pageH + 20; // page height + 20px visual gap
-  const topMarginPx = 14 * mmToPx; // matches .paper { padding-top: 14mm }
+  const topMarginPx = 26 * mmToPx; // screen preview: paper top padding + printable inset
 
   // ── 1. Reset ALL dynamic paddings ──
   document.querySelectorAll('.section.after-break').forEach(s => s.style.paddingTop = '');
@@ -1733,6 +1733,7 @@ function adjustSectionBreakSpacing() {
   // ── 2. Snapshot every break point BEFORE any padding is applied ──
   const sectionBreaks = Array.from(document.querySelectorAll('.section.after-break')).map(section => {
     const top = section.getBoundingClientRect().top - paperTop;
+    const content = section.querySelector('.section-head') || section;
     const marker = section.previousElementSibling?.classList.contains('pbreak-slot')
       ? section.previousElementSibling.querySelector('.pbreak-marker')
       : null;
@@ -1740,9 +1741,9 @@ function adjustSectionBreakSpacing() {
       el: section,
       kind: 'section',
       refTop: top,
-      contentTop: top,
+      getContentTop: () => content.getBoundingClientRect().top - paperTop,
       marker,
-      markerTop: marker ? marker.getBoundingClientRect().top - paperTop : null,
+      getMarkerTop: () => marker ? marker.getBoundingClientRect().top - paperTop : null,
       applyPadding: px => { section.style.paddingTop = px > 0 ? `${px}px` : ''; },
     };
   });
@@ -1756,42 +1757,41 @@ function adjustSectionBreakSpacing() {
       el: content,
       kind: 'schedule',
       refTop,
-      contentTop: content.getBoundingClientRect().top - paperTop,
+      getContentTop: () => content.getBoundingClientRect().top - paperTop,
       marker: bar,
-      markerTop: bar ? bar.getBoundingClientRect().top - paperTop : null,
+      getMarkerTop: () => bar ? bar.getBoundingClientRect().top - paperTop : null,
       applyPadding: px => { content.style.paddingTop = px > 0 ? `${px}px` : ''; },
     };
   });
 
   const snapshots = [...sectionBreaks, ...scheduleBreaks]
-    .map(snapshot => ({
-      ...snapshot,
-      targetPage: Math.ceil(snapshot.refTop / pageSlot),
-    }))
     .sort((a, b) => a.refTop - b.refTop);
+  let nextTargetPage = 1;
+  snapshots.forEach(snapshot => {
+    snapshot.targetPage = Math.max(Math.ceil(snapshot.refTop / pageSlot), nextTargetPage);
+    nextTargetPage = snapshot.targetPage + 1;
+  });
   const scheduleMarkerPages = new Set(
     snapshots
       .filter(snapshot => snapshot.kind === 'schedule' && snapshot.marker)
       .map(snapshot => snapshot.targetPage)
   );
 
-  // ── 3. Apply padding in page order, compensating for earlier shifts ──
-  let shift = 0; // running total of padding added by previous continuations
-  snapshots.forEach(({ kind, targetPage, contentTop, marker, markerTop, applyPadding }) => {
-    const actualTop     = contentTop + shift;                     // true current position
+  // ── 3. Apply padding in page order using live positions ──
+  snapshots.forEach(({ kind, targetPage, getContentTop, marker, getMarkerTop, applyPadding }) => {
+    const actualTop     = getContentTop();                         // reflects prior padding
     const needed        = targetPage * pageSlot + topMarginPx - actualTop;
     const padding       = needed > 0 ? Math.round(needed) : 0;
+    const markerTop     = getMarkerTop();
     if (marker && markerTop != null) {
       const duplicateSectionMarker = kind === 'section' && scheduleMarkerPages.has(targetPage);
       marker.style.visibility = duplicateSectionMarker ? 'hidden' : '';
       const markerH = marker.getBoundingClientRect().height;
       const pageGapTop = targetPage * pageSlot - 20;
       const markerTargetTop = pageGapTop + ((20 - markerH) / 2);
-      const markerActualTop = markerTop + shift;
-      marker.style.transform = `translateY(${Math.round(markerTargetTop - markerActualTop)}px)`;
+      marker.style.transform = `translateY(${Math.round(markerTargetTop - markerTop)}px)`;
     }
     applyPadding(padding);
-    shift += padding;
   });
 }
 
