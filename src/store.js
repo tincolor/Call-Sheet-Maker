@@ -1,0 +1,73 @@
+import { CS_KEY, CS_KEY_V1, MULTILINE_META_KEYS } from './constants.js';
+import { uid, htmlToText } from './utils.js';
+import { DEFAULT_STORE } from './data.js';
+import { logoBbc, logoSa } from './logos.js';
+
+export const app = {
+  store: null, // set to load() output at boot time
+  get state() {
+    return app.store?.days.find(d => d.id === app.store.currentDayId)
+        || app.store?.days[0];
+  },
+};
+
+export function normalizeMultilineFields(day) {
+  if (!day?.meta) return;
+  if (!('headerNote' in day.meta)) day.meta.headerNote = '';
+  for (const key of MULTILINE_META_KEYS) {
+    if (key in day.meta) day.meta[key] = htmlToText(day.meta[key]);
+  }
+  (day.sections || []).forEach(sec => {
+    if (sec.type === 'notes' && sec.data && typeof sec.data === 'object') {
+      sec.data.text = htmlToText(sec.data.text);
+    }
+  });
+}
+
+export function fixupLogos(day) {
+  if (day.logos) {
+    if (day.logos[0] && !day.logos[0].dataUrl) day.logos[0].dataUrl = logoBbc;
+    if (day.logos[1] && !day.logos[1].dataUrl) day.logos[1].dataUrl = logoSa;
+  }
+  if (!day.pageBreaks) day.pageBreaks = [];
+  normalizeMultilineFields(day);
+}
+
+export function load() {
+  try {
+    const raw = localStorage.getItem(CS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && s.days && s.currentDayId) {
+        s.days.forEach(fixupLogos);
+        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4' };
+        if (!('paperSize' in s.tweaks)) s.tweaks.paperSize = 'a4';
+        return s;
+      }
+    }
+    // migrate v1 single-day state → store with one day
+    const v1 = localStorage.getItem(CS_KEY_V1);
+    if (v1) {
+      const s1 = JSON.parse(v1);
+      const day = { id: uid(), meta: s1.meta || {}, logos: s1.logos || [], pageBreaks: s1.pageBreaks || [], sections: s1.sections || [] };
+      fixupLogos(day);
+      return { days: [day], currentDayId: day.id, tweaks: { showLogo: true, paperSize: 'a4', ...(s1.tweaks || {}) } };
+    }
+  } catch(e) { console.warn('load fail', e); }
+  return DEFAULT_STORE();
+}
+
+let saveTimer;
+export function save() {
+  clearTimeout(saveTimer);
+  setStatus('saving…');
+  saveTimer = setTimeout(() => {
+    localStorage.setItem(CS_KEY, JSON.stringify(app.store));
+    setStatus('saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+  }, 250);
+}
+
+export function setStatus(t) {
+  const el = document.getElementById('saveStatus');
+  if (el) el.textContent = t;
+}
