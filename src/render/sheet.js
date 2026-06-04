@@ -1,15 +1,8 @@
 import { app } from '../store.js';
-import { renderHeader, renderLogos } from './header.js';
-import { renderSections } from './sections.js';
-import { renderDaySwitcher } from '../days.js';
 import { isReflowing, autoReflow } from './reflow.js';
 
 export function renderSheet() {
-  renderHeader();
-  renderLogos();
-  renderSections();
   applyTweaks();
-  renderDaySwitcher();
   // After layout settles, auto-calculate page breaks for schedule sections
   if (!isReflowing()) requestAnimationFrame(autoReflow);
 }

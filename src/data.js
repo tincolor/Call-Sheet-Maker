@@ -2,8 +2,9 @@ import { uid } from './utils.js';
 import { logoBbc, logoSa } from './logos.js';
 
 // ---- default day (populated from Day 3 sheet) ----
-export const DEFAULT_DAY = () => ({
-  id: uid(),
+export function DEFAULT_DAY() {
+  return {
+    id: uid(),
   meta: {
     company: 'Street Attack Japan K.K.',
     address: '2-13, Akasaka 9-chome, Minato-ku,\nTokyo 107-0052, Japan\nninetytwo13, #607',
@@ -114,11 +115,13 @@ export const DEFAULT_DAY = () => ({
       data: { text: '' },
     },
   ],
-});
+  };
+}
 
 // ---- blank day (for "+ New day") ----
-export const BLANK_DAY = () => ({
-  id: uid(),
+export function BLANK_DAY() {
+  return {
+    id: uid(),
   meta: {
     company: '', address: '', project: '', client: '', mainLocation: '',
     date: '', day: '', shootCall: '',
@@ -137,9 +140,10 @@ export const BLANK_DAY = () => ({
     { id: uid(), type: 'equipment', title: 'Equipment Checklist', data: [] },
     { id: uid(), type: 'notes', title: 'Notes', data: { text: '' } },
   ],
-});
+  };
+}
 
-export const DEFAULT_STORE = () => {
+export function DEFAULT_STORE() {
   const d = DEFAULT_DAY();
   return { days: [d], currentDayId: d.id, tweaks: { showLogo: true, paperSize: 'a4' } };
-};
+}

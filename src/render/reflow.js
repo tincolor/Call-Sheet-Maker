@@ -1,5 +1,5 @@
 import { app } from '../store.js';
-import { renderSections } from './sections.js';
+import { commit } from '../signals.js';
 
 let _reflowing = false;
 
@@ -83,7 +83,7 @@ export function autoReflow() {
     neededUniq.forEach(b =>
       app.state.pageBreaks.push({ beforeRow: { sectionId: b.sectionId, idx: b.idx }, auto: true })
     );
-    renderSections();
+    commit();
     // Allow a second pass after layout settles, then push continuations to page boundaries
     requestAnimationFrame(() => requestAnimationFrame(() => {
       _reflowing = false;

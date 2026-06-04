@@ -1,13 +1,19 @@
 import { CS_KEY, CS_KEY_V1, MULTILINE_META_KEYS } from './constants.js';
 import { uid, htmlToText } from './utils.js';
 import { DEFAULT_STORE } from './data.js';
+import { storeSignal, commit } from './signals.js';
 import { logoBbc, logoSa } from './logos.js';
 
 export const app = {
-  store: null, // set to load() output at boot time
+  get store() {
+    return storeSignal.value;
+  },
+  set store(val) {
+    storeSignal.value = val;
+  },
   get state() {
-    return app.store?.days.find(d => d.id === app.store.currentDayId)
-        || app.store?.days[0];
+    return storeSignal.value?.days.find(d => d.id === storeSignal.value.currentDayId)
+        || storeSignal.value?.days[0];
   },
 };
 
@@ -35,6 +41,7 @@ export function fixupLogos(day) {
 
 export function load() {
   try {
+    if (typeof localStorage === 'undefined') return DEFAULT_STORE();
     const raw = localStorage.getItem(CS_KEY);
     if (raw) {
       const s = JSON.parse(raw);
@@ -61,6 +68,7 @@ let saveTimer;
 export function save() {
   clearTimeout(saveTimer);
   setStatus('saving…');
+  commit();
   saveTimer = setTimeout(() => {
     localStorage.setItem(CS_KEY, JSON.stringify(app.store));
     setStatus('saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));

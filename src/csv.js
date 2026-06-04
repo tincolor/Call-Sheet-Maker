@@ -2,7 +2,6 @@ import { app, save } from './store.js';
 import { uid, esc } from './utils.js';
 import { DEFAULT_DAY } from './data.js';
 import { renderSheet } from './render/sheet.js';
-import { renderDaySwitcher } from './days.js';
 import { renderIntakePreview, setIntakeStep, setIntakeDraft } from './intake.js';
 
 export function csvEscape(s) {
@@ -104,7 +103,6 @@ export function importCSV() {
         app.store.currentDayId = fresh[0].id;
         save();
         renderSheet();
-        renderDaySwitcher();
       } catch (e) {
         alert('CSV parse error: ' + e.message);
       }

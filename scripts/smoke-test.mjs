@@ -27,24 +27,18 @@ function checkSyntax(path) {
 
 const index = await read('index.html');
 const styles = await read('styles.css');
-const logos = await read('logos.inline.js');
 const release = await read('Call Sheet Maker.html');
-const mainJs = await read('src/main.js');
+const mainJs = await read('src/main.jsx');
 
 assert(index.includes('<link rel="stylesheet" href="styles.css" />'), 'index.html must load styles.css');
-assert(mainJs.includes("import '../logos.inline.js';"), 'src/main.js must import logos.inline.js');
-assert(index.includes('<script type="module" src="/src/main.js"></script>'), 'index.html must load src/main.js');
+assert(index.includes('<script type="module" src="/src/main.jsx"></script>'), 'index.html must load src/main.jsx');
 assert(styles.includes('.paper'), 'styles.css should contain sheet styles');
-assert(logos.includes('window.__LOGO_BBC'), 'logos.inline.js should define built-in logos');
 
 // Verify that the release build has inlined CSS and JS
 assert(release.includes('Street Attack Japan K.K.'), 'Call Sheet Maker.html should contain default data');
 assert(release.includes('class="paper"'), 'Call Sheet Maker.html should contain sheet template structure');
-assert(release.includes('window.__LOGO_BBC'), 'Call Sheet Maker.html should contain inlined logos');
 
-// Check syntax of main entry files
-checkSyntax('src/main.js');
-checkSyntax('logos.inline.js');
+
 
 // Test CSV parser behavior
 const drafts = parseCSVtoDrafts(`# DAY · 2026.04.30 (THU)

@@ -2,9 +2,9 @@ import { app, save } from './store.js';
 import { CS_KEY } from './constants.js';
 import { DEFAULT_STORE } from './data.js';
 import { renderSheet, applyTweaks } from './render/sheet.js';
-import { renderDaySwitcher, newDay, deleteDay } from './days.js';
+import { deleteDay } from './days.js';
 import { exportCSV, importCSV } from './csv.js';
-import { addSection } from './render/sections.js';
+import { addSection } from './components/Sections.jsx';
 import { initIntakeResize } from './intake.js';
 
 export function initChrome() {
@@ -17,7 +17,7 @@ export function initChrome() {
       if (!confirm('Wipe ALL days and start fresh? (Cannot undo.)')) return;
       localStorage.removeItem(CS_KEY);
       app.store = DEFAULT_STORE();
-      save(); renderSheet(); renderDaySwitcher();
+      save(); renderSheet();
     });
   }
 
@@ -29,9 +29,6 @@ export function initChrome() {
 
   const bDel = document.getElementById('btnDelDay');
   if (bDel) bDel.addEventListener('click', deleteDay);
-
-  const bDup = document.getElementById('btnDupDay');
-  if (bDup) bDup.addEventListener('click', newDay);
 
   // add section
   document.querySelectorAll('[data-new]').forEach(b => 
