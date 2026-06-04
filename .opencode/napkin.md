@@ -21,6 +21,12 @@
 - Leaving raw non-module scripts like `<script src="logos.inline.js"></script>` in Vite projects if they must be inlined; Vite won't bundle them without `type="module"`.
 - Calling Node `--check` syntax checks on `.jsx` files as Node does not natively support JSX.
 - Using `div style={{ display: 'contents' }}` as a JSX list loop wrapper when DOM methods like `previousElementSibling` are used to target adjacent elements; the div is still present in the DOM tree and interrupts sibling lookups.
+- Auto-detecting section page breaks via `getBoundingClientRect()` in screen mode: screen CSS (padding 14mm/16mm, 8mm sections-body margin-top, 8px section padding-top) differs from print CSS (padding 12mm all sides, no margins) by ~14mm per page, causing breaks to fire too early. Correcting for print values helped but was still inaccurate because schedule section screen heights are inflated by `adjustSectionBreakSpacing` continuation padding. Abandoned in favour of manual-only breaks for now.
+
+## Architecture Notes
+- The editor uses multiple `.paper` divs stacked in `.page-wrap` (flex-column, gap: 24px) to simulate a print-preview layout. `Pages.jsx` splits `state.sections` by manual `pageBreaks` entries (`{ before: sectionId }`) and renders each group as its own paper card. Manual breaks have no `auto` flag; future auto breaks should use `{ before: sectionId, auto: true }` so they can be filtered independently.
+- `SheetHeader.jsx` is the JSX version of the editable call-sheet header (replaces the old static HTML). `Header.jsx` is kept only for its `Logos` component.
+- Screen vs print CSS differences to remember: print paper padding is `12mm` all sides (not screen's `14mm top / 16mm bottom`); `.sections-body margin-top: 8mm` and `.section padding-top: 8px` are screen-only; print adds `.section margin-bottom: 4mm`.
 
 ## Domain Notes
 - Call Sheet Maker is a standalone browser app for production call sheets

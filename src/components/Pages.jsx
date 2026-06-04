@@ -4,10 +4,10 @@ import { SheetHeader } from './SheetHeader.jsx';
 import { Sections, addSection } from './Sections.jsx';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
-import { adjustSectionBreakSpacing, autoReflowSections } from '../render/reflow.js';
+import { adjustSectionBreakSpacing } from '../render/reflow.js';
 
 function splitIntoPages(sections, pageBreaks) {
-  const breakBefore = new Set(pageBreaks.filter(b => b.before).map(b => b.before));
+  const breakBefore = new Set(pageBreaks.filter(b => b.before && !b.auto).map(b => b.before));
   const pages = [[]];
   for (const sec of sections) {
     if (breakBefore.has(sec.id)) pages.push([]);
@@ -21,10 +21,7 @@ export function Pages() {
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
 
   useLayoutEffect(() => {
-    requestAnimationFrame(() => {
-      autoReflowSections();
-      adjustSectionBreakSpacing();
-    });
+    requestAnimationFrame(adjustSectionBreakSpacing);
   }, [store]);
 
   if (!state) return null;
