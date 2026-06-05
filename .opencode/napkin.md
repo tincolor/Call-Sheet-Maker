@@ -31,6 +31,7 @@
 - The editor uses multiple `.paper` divs stacked in `.page-wrap` (flex-column, gap: 24px) to simulate a print-preview layout. `Pages.jsx` splits `state.sections` by manual `pageBreaks` entries (`{ before: sectionId }`) and renders each group as its own paper card. Manual breaks have no `auto` flag; future auto breaks should use `{ before: sectionId, auto: true }` so they can be filtered independently.
 - `SheetHeader.jsx` is the JSX version of the editable call-sheet header (replaces the old static HTML). `Header.jsx` is kept only for its `Logos` component.
 - Screen vs print CSS differences to remember: print paper padding is `12mm` all sides (not screen's `14mm top / 16mm bottom`); `.sections-body margin-top: 8mm` and `.section padding-top: 8px` are screen-only; print adds `.section margin-bottom: 4mm`.
+- The `how-to-use-drawer` slides from the left, utilizes `z-index: 1001` with an overlay backdrop, and is mounted inside `#howToUseRoot` at the body level to ensure it overlays the main workspace cleanly and is hidden during printing.
 
 ## Domain Notes
 - Call Sheet Maker is a standalone browser app for production call sheets
