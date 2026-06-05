@@ -42,6 +42,7 @@ export function AppBar() {
       <button title="Export current day as CSV" onClick={exportCSV}>Export CSV</button>
       <button title="Tweaks" onClick={() => document.body.classList.toggle('tweaks-open')}>Tweaks</button>
       <button title="Wipe all days" onClick={handleReset}>Reset All</button>
+      <button title="How to use this app" onClick={() => document.body.classList.toggle('how-to-use-open')}>How To Use</button>
       <button class="primary" title="Print or save as PDF (Cmd/Ctrl+P)" onClick={() => window.print()}>Print / PDF</button>
     </div>
   );

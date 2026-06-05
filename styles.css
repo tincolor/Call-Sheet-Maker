@@ -863,7 +863,7 @@
   @media print {
     html, body { background: #fff; }
     .appbar, .tweaks, .row-controls, .add-row, .sec-ctrls, .logo-ctrls, .logo-add, .add-sec, .pbreak-slot, .row-del,
-    .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer, .page-break-ctrl { display: none !important; }
+    .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer, .page-break-ctrl, .how-to-use-backdrop, .how-to-use-drawer { display: none !important; }
     /* Hide sidebar, show only call sheet */
     .workspace { display: block !important; height: auto !important; overflow: visible !important; }
     .intake-sidebar { display: none !important; }
@@ -889,4 +889,201 @@
     table.sched tr.after-break-row { break-before: page; page-break-before: always; }
     table.sched tr.after-break-row > td { padding-top: 14mm !important; }
     [contenteditable="true"]:empty::before { content: ""; }
+  }
+
+  /* ──────────────── "How To Use" sliding drawer ──────────────── */
+  .how-to-use-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000;
+  }
+  body.how-to-use-open .how-to-use-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .how-to-use-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(480px, 90vw);
+    background: var(--paper);
+    border-right: 1px solid var(--rule);
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.08);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  body.how-to-use-open .how-to-use-drawer {
+    transform: translateX(0);
+  }
+
+  .how-to-use-drawer-hd {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--rule-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+  }
+  .how-to-use-drawer-hd h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .how-to-use-drawer-hd h3 svg {
+    color: var(--accent);
+  }
+  .how-to-use-drawer-hd .close-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--ink-3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .how-to-use-drawer-hd .close-btn:hover {
+    background: var(--rule-2);
+    color: var(--ink);
+  }
+
+  .how-to-use-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .how-to-use-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .how-to-use-section h4 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--rule-2);
+    padding-bottom: 6px;
+  }
+  .how-to-use-section p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .how-to-use-section p strong {
+    color: var(--ink);
+  }
+  .how-to-use-section a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .how-to-use-section a:hover {
+    text-decoration: underline;
+  }
+
+  .how-to-use-workflow-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .how-to-use-workflow-card {
+    background: var(--bg);
+    border: 1px solid var(--rule-2);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .how-to-use-workflow-card h5 {
+    margin: 0 0 6px 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .how-to-use-workflow-card p {
+    font-size: 11px;
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .how-to-use-key-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding-left: 20px;
+    font-size: 11.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .how-to-use-key-steps li {
+    margin-bottom: 4px;
+  }
+  .how-to-use-key-steps li strong {
+    color: var(--ink);
+  }
+
+  .how-to-use-functions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .how-to-use-function-item {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--rule-2);
+    align-items: start;
+  }
+  .how-to-use-function-item:last-child {
+    border-bottom: none;
+  }
+  .how-to-use-function-name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--bg);
+    border: 1px solid var(--rule-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent-ink);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .how-to-use-function-desc {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--ink-2);
+    margin: 0;
   }

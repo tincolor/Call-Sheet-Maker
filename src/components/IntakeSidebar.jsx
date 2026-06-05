@@ -85,10 +85,15 @@ export function IntakeSidebar() {
   const [saveBtnText, setSaveBtnText] = useState('Save');
 
   const hasKey = !!apiKey;
-  const pillText = hasKey ? 'using ' + apiModel.replace('claude-', '') : 'built-in';
+  const hasBuiltIn = typeof window !== 'undefined' && !!window.claude?.complete;
+  const pillText = hasKey 
+    ? 'using ' + apiModel.replace('claude-', '') 
+    : (hasBuiltIn ? 'built-in' : 'key required');
   const hintText = hasKey
     ? `Using your API key · ${apiModel} · up to 8k output tokens`
-    : 'Uses built-in Claude Haiku · output capped at ~1024 tokens';
+    : hasBuiltIn
+      ? 'Uses built-in Claude Haiku · output capped at ~1024 tokens'
+      : 'Claude API key required for AI Intake';
 
   // Render preview imperatively when entering verify step
   useEffect(() => {
