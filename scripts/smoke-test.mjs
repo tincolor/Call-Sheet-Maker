@@ -36,7 +36,7 @@ assert(styles.includes('.paper'), 'styles.css should contain sheet styles');
 
 // Verify that the release build has inlined CSS and JS
 assert(release.includes('Street Attack Japan K.K.'), 'Call Sheet Maker.html should contain default data');
-assert(release.includes('class="paper"'), 'Call Sheet Maker.html should contain sheet template structure');
+assert(release.includes('class:`paper`') || release.includes('class:"paper"'), 'Call Sheet Maker.html should contain sheet template structure');
 
 
 

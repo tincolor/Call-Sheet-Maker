@@ -190,7 +190,7 @@ useLayoutEffect(() => {
    ```
 4. Create `src/signals.js` with `storeSignal`, `commit()`, `currentDay`.
 5. Update `save()` in `store.js` to call `commit()` after the debounce fires.
-6. Verify `npm run build` still produces a valid single-file HTML.
+6. Verify `bun run build` still produces a valid single-file HTML.
 
 **Risk:** Low. The existing render functions still run; Preact is just available.
 

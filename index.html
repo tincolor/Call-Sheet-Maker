@@ -33,80 +33,14 @@
   </svg>
 </template>
 
-
 <!-- App bar -->
-<div class="appbar">
-  <div class="appbar-left">
-    <div class="brand">
-      Call Sheet
-      <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
-    </div>
-  </div>
-  <div class="day-switcher" id="daySwitcher"></div>
-  <div class="spacer"></div>
-  <button id="btnDelDay" title="Delete current day">Delete Day</button>
-  <button id="btnImportCSV" title="Import CSV into current day">Import CSV</button>
-  <button id="btnExportCSV" title="Export current day as CSV">Export CSV</button>
-  <button id="btnTweaks" title="Tweaks">Tweaks</button>
-  <button id="btnReset" title="Wipe all days">Reset All</button>
-  <button id="btnPrint" class="primary" title="Print or save as PDF (Cmd/Ctrl+P)">Print / PDF</button>
-</div>
+<div id="appBarRoot"></div>
 
 <!-- ──────────── WORKSPACE (sidebar + sheet) ──────────── -->
 <div class="workspace">
 
 <!-- LEFT: Intake sidebar -->
-<div class="intake-sidebar" id="intakeSidebar">
-  <div class="intake-sidebar-hd">Intake</div>
-  <div class="intake">
-    <p class="lede">Paste raw notes — messages, emails, mixed languages — and Claude will structure them into the call sheet.</p>
-    <div id="intake-input">
-      <textarea id="intakeInput" placeholder="Paste anything — WhatsApp threads, emails, voice notes. Claude will interpret and organize it."></textarea>
-      <div class="actions">
-        <button class="primary" id="intakeInterpret">Interpret →</button>
-        <span class="hint" id="intakeHint"></span>
-      </div>
-      <details class="api-key-block">
-        <summary>
-          <span>Claude API key <span class="pill" id="apiKeyStatus">built-in</span></span>
-          <span class="chev">▾</span>
-        </summary>
-        <div class="api-key-body">
-          <p>Paste a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Stored only in this browser.</p>
-          <div class="api-key-row">
-            <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;" />
-            <button id="apiKeySave">Save</button>
-            <button id="apiKeyClear">Clear</button>
-          </div>
-          <select id="apiKeyModel" style="width:100%;margin-top:6px;">
-            <option value="claude-sonnet-4-5">Sonnet 4.5 (best)</option>
-            <option value="claude-haiku-4-5">Haiku 4.5 (fast)</option>
-          </select>
-          <p class="warn" style="margin-top:8px;">⚠ Usage bills to your Anthropic account.</p>
-        </div>
-      </details>
-    </div>
-    <div id="intake-loading" style="display:none">
-      <div class="loader"><div class="spinner"></div><div>Interpreting…</div></div>
-    </div>
-    <div id="intake-verify" style="display:none">
-      <div id="intakePreview"></div>
-      <div class="actions">
-        <button class="primary" id="intakePublish">Publish to Sheet →</button>
-        <button id="intakeCancel">Cancel</button>
-        <span class="hint">Yellow = differs from current sheet</span>
-      </div>
-    </div>
-    <div id="intake-error" style="display:none">
-      <h3 style="font-size:13px;margin:0 0 6px;">Something went wrong</h3>
-      <div id="intakeError" style="font-size:12px;color:var(--accent);margin-bottom:10px;"></div>
-      <div class="actions">
-        <button class="primary" id="intakeRetry">Retry</button>
-        <button id="intakeCancel2" onclick="document.getElementById('intake-error').style.display='none';document.getElementById('intake-input').style.display='';">Back</button>
-      </div>
-    </div>
-  </div>
-</div>
+<div id="intakeSidebarRoot"></div>
 <div class="intake-resizer" id="intakeResizer" title="Resize intake"></div>
 
 <!-- RIGHT: Call sheet -->
@@ -117,20 +51,7 @@
 </div><!-- end .workspace -->
 
 <!-- Tweaks panel -->
-<div class="tweaks">
-  <h4>Tweaks <button class="close" id="tweaksClose">×</button></h4>
-  <div class="row">
-    <label>Page size</label>
-    <div style="display:flex;gap:4px;">
-      <button id="btnSizeA4" class="size-btn active" title="A4 (210×297mm)">A4</button>
-      <button id="btnSizeLetter" class="size-btn" title="US Letter (8.5×11in)">Letter</button>
-    </div>
-  </div>
-  <div class="row">
-    <label>Logo slot</label>
-    <button class="toggle" data-tweak="showLogo" title="Show/hide logos"></button>
-  </div>
-</div>
+<div id="tweaksPanelRoot"></div>
 
 <script type="module" src="/src/main.jsx"></script>
 </body>

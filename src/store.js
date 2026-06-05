@@ -1,7 +1,7 @@
 import { CS_KEY, CS_KEY_V1, MULTILINE_META_KEYS } from './constants.js';
 import { uid, htmlToText } from './utils.js';
 import { DEFAULT_STORE } from './data.js';
-import { storeSignal, commit } from './signals.js';
+import { storeSignal, saveStatusSignal, commit } from './signals.js';
 import { logoBbc, logoSa } from './logos.js';
 
 export const app = {
@@ -76,6 +76,5 @@ export function save() {
 }
 
 export function setStatus(t) {
-  const el = document.getElementById('saveStatus');
-  if (el) el.textContent = t;
+  saveStatusSignal.value = t;
 }

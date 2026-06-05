@@ -16,11 +16,15 @@
 - Renaming entry points containing JSX syntax to `.jsx` so Rolldown/Vite parses them correctly.
 - Using `useLayoutEffect` to trigger imperative DOM reflow side-effects (`adjustSectionBreakSpacing`) after Preact renders.
 - Using Preact's `<Fragment>` to map items in loops, ensuring DOM tree queries like `previousElementSibling` continue to resolve correct siblings.
+- Using `pandoc` to successfully convert `.docx` documents to clean markdown formatting.
+- Keeping `intakeDraft` as a plain module-level variable (not a signal) works fine when step-signal changes trigger re-renders that read the draft; avoids signal overhead for a large mutable object.
+- For imperative contenteditable preview tables, use `useEffect` on step + a `ref` to the host div — lets DOM-building stay imperative without fighting Preact's diffing.
 
 ## Patterns That Don't Work
 - Leaving raw non-module scripts like `<script src="logos.inline.js"></script>` in Vite projects if they must be inlined; Vite won't bundle them without `type="module"`.
 - Calling Node `--check` syntax checks on `.jsx` files as Node does not natively support JSX.
 - Using `div style={{ display: 'contents' }}` as a JSX list loop wrapper when DOM methods like `previousElementSibling` are used to target adjacent elements; the div is still present in the DOM tree and interrupts sibling lookups.
+- Smoke-test string checks for Preact-compiled class attributes must use backtick form (`class:\`paper\``) not HTML form (`class="paper"`) — Vite/Rolldown emits template literals in the inlined bundle.
 - Auto-detecting section page breaks via `getBoundingClientRect()` in screen mode: screen CSS (padding 14mm/16mm, 8mm sections-body margin-top, 8px section padding-top) differs from print CSS (padding 12mm all sides, no margins) by ~14mm per page, causing breaks to fire too early. Correcting for print values helped but was still inaccurate because schedule section screen heights are inflated by `adjustSectionBreakSpacing` continuation padding. Abandoned in favour of manual-only breaks for now.
 
 ## Architecture Notes

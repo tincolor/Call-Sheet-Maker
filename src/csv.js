@@ -2,7 +2,7 @@ import { app, save } from './store.js';
 import { uid, esc } from './utils.js';
 import { DEFAULT_DAY } from './data.js';
 import { renderSheet } from './render/sheet.js';
-import { renderIntakePreview, setIntakeStep, setIntakeDraft } from './intake.js';
+import { setIntakeStep, setIntakeDraft } from './intake.js';
 
 export function csvEscape(s) {
   s = s == null ? '' : String(s);
@@ -74,7 +74,6 @@ export function importCSV() {
         if (drafts.length === 1) {
           // Single day — go through the verify/preview flow
           setIntakeDraft(drafts[0]);
-          renderIntakePreview();
           setIntakeStep('verify');
           return;
         }
