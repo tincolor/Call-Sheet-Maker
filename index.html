@@ -33,196 +33,26 @@
   </svg>
 </template>
 
-
 <!-- App bar -->
-<div class="appbar">
-  <div class="appbar-left">
-    <div class="brand">
-      Call Sheet
-      <span class="sub"><span id="paperSizeLabel">A4</span> · <span id="saveStatus" class="status">saved</span></span>
-    </div>
-  </div>
-  <div class="day-switcher" id="daySwitcher"></div>
-  <div class="spacer"></div>
-  <button id="btnDelDay" title="Delete current day">Delete Day</button>
-  <button id="btnImportCSV" title="Import CSV into current day">Import CSV</button>
-  <button id="btnExportCSV" title="Export current day as CSV">Export CSV</button>
-  <button id="btnTweaks" title="Tweaks">Tweaks</button>
-  <button id="btnReset" title="Wipe all days">Reset All</button>
-  <button id="btnPrint" class="primary" title="Print or save as PDF (Cmd/Ctrl+P)">Print / PDF</button>
-</div>
+<div id="appBarRoot"></div>
 
 <!-- ──────────── WORKSPACE (sidebar + sheet) ──────────── -->
 <div class="workspace">
 
 <!-- LEFT: Intake sidebar -->
-<div class="intake-sidebar" id="intakeSidebar">
-  <div class="intake-sidebar-hd">Intake</div>
-  <div class="intake">
-    <p class="lede">Paste raw notes — messages, emails, mixed languages — and Claude will structure them into the call sheet.</p>
-    <div id="intake-input">
-      <textarea id="intakeInput" placeholder="Paste anything — WhatsApp threads, emails, voice notes. Claude will interpret and organize it."></textarea>
-      <div class="actions">
-        <button class="primary" id="intakeInterpret">Interpret →</button>
-        <span class="hint" id="intakeHint"></span>
-      </div>
-      <details class="api-key-block">
-        <summary>
-          <span>Claude API key <span class="pill" id="apiKeyStatus">built-in</span></span>
-          <span class="chev">▾</span>
-        </summary>
-        <div class="api-key-body">
-          <p>Paste a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Stored only in this browser.</p>
-          <div class="api-key-row">
-            <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" style="flex:1;min-width:0;" />
-            <button id="apiKeySave">Save</button>
-            <button id="apiKeyClear">Clear</button>
-          </div>
-          <select id="apiKeyModel" style="width:100%;margin-top:6px;">
-            <option value="claude-sonnet-4-5">Sonnet 4.5 (best)</option>
-            <option value="claude-haiku-4-5">Haiku 4.5 (fast)</option>
-          </select>
-          <p class="warn" style="margin-top:8px;">⚠ Usage bills to your Anthropic account.</p>
-        </div>
-      </details>
-    </div>
-    <div id="intake-loading" style="display:none">
-      <div class="loader"><div class="spinner"></div><div>Interpreting…</div></div>
-    </div>
-    <div id="intake-verify" style="display:none">
-      <div id="intakePreview"></div>
-      <div class="actions">
-        <button class="primary" id="intakePublish">Publish to Sheet →</button>
-        <button id="intakeCancel">Cancel</button>
-        <span class="hint">Yellow = differs from current sheet</span>
-      </div>
-    </div>
-    <div id="intake-error" style="display:none">
-      <h3 style="font-size:13px;margin:0 0 6px;">Something went wrong</h3>
-      <div id="intakeError" style="font-size:12px;color:var(--accent);margin-bottom:10px;"></div>
-      <div class="actions">
-        <button class="primary" id="intakeRetry">Retry</button>
-        <button id="intakeCancel2" onclick="document.getElementById('intake-error').style.display='none';document.getElementById('intake-input').style.display='';">Back</button>
-      </div>
-    </div>
-  </div>
-</div>
+<div id="intakeSidebarRoot"></div>
 <div class="intake-resizer" id="intakeResizer" title="Resize intake"></div>
 
 <!-- RIGHT: Call sheet -->
 <div class="sheet-main">
-<div class="page-wrap">
-<div class="paper" id="paper">
-
-  <!-- HEADER ROW 1 -->
-  <div class="hd">
-    <div class="hd-company">
-      <div class="logo-slot-wrap" id="logoSlot"></div>
-      <div class="name" contenteditable="true" data-k="company" data-html="1"></div>
-      <div class="addr" contenteditable="true" data-k="address" data-html="1"></div>
-      <div style="flex:1"></div>
-      <div class="hd-crew" id="headerCrew">
-        <div><span class="role">Producer :</span><span contenteditable="true" data-k="crew.lp"></span></div>
-        <div><span class="role">US Producer :</span><span contenteditable="true" data-k="crew.usprod"></span></div>
-        <div><span class="role">Director :</span><span contenteditable="true" data-k="crew.director"></span></div>
-        <div><span class="role">DOP :</span><span contenteditable="true" data-k="crew.dop"></span></div>
-      </div>
-    </div>
-
-    <div class="hd-crew" style="display:flex;flex-direction:column;gap:10px;">
-      <div>
-        <div class="lbl">Project <span class="jp">作品</span></div>
-        <div contenteditable="true" data-k="project" data-placeholder="Project" style="font-weight:700;margin-top:3px;font-size:15px;letter-spacing:-0.01em;"></div>
-      </div>
-      <div>
-        <div class="lbl">Client <span class="jp">クライアント</span></div>
-        <div contenteditable="true" data-k="client" data-placeholder="Client" style="margin-top:2px;font-weight:500;"></div>
-      </div>
-      <div>
-        <div class="lbl">Location <span class="jp">ロケ地</span></div>
-        <div contenteditable="true" data-k="mainLocation" data-placeholder="Main location" style="margin-top:2px;"></div>
-      </div>
-    </div>
-
-    <div class="hd-title">
-      <div class="title-row">CALL SHEET<span class="jp jp-only">/ 香盤表</span></div>
-      <div class="kv">
-        <div class="k">Date</div>
-        <div class="v" contenteditable="true" data-k="date" data-placeholder="YYYY.MM.DD (DAY)"></div>
-      </div>
-      <div class="kv">
-        <div class="k">Day</div>
-        <div class="v" contenteditable="true" data-k="day" data-placeholder="#"></div>
-      </div>
-      <div class="shoot-call">
-        <span class="lbl">Shoot Call <span class="jp">撮影開始</span></span>
-        <span class="time" contenteditable="true" data-k="shootCall" data-placeholder="00:00"></span>
-        <div class="header-note" contenteditable="true" data-k="headerNote" data-placeholder="Header note"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- HEADER ROW 2 -->
-  <div class="hd2">
-    <div class="emergency">
-      <div class="lbl">Emergency <span class="jp">緊急連絡</span></div>
-      <div class="v" contenteditable="true" data-k="emergency" data-placeholder="Emergency contact"></div>
-    </div>
-    <div class="weather">
-      <span class="lbl" style="color:var(--ink-3);margin-bottom:2px;">Weather <span class="jp">天気</span></span>
-      <span contenteditable="true" data-k="weatherCallout" data-placeholder="Weather callout"></span>
-    </div>
-    <div class="sun">
-      <span><span class="k">☀ Rise</span><span class="v" contenteditable="true" data-k="sunrise" data-placeholder="—"></span></span>
-      <span><span class="k">☾ Set</span><span class="v" contenteditable="true" data-k="sunset" data-placeholder="—"></span></span>
-    </div>
-  </div>
-
-  <!-- SECTIONS -->
-  <div id="sectionsHost"></div>
-
-  <!-- ADD SECTION -->
-  <div class="add-sec">
-    <div class="add-sec-title">Add section</div>
-    <div class="add-sec-buttons">
-      <button data-new="schedule">+ Schedule</button>
-      <button data-new="contacts">+ Contacts</button>
-      <button data-new="equipment">+ Equipment</button>
-      <button data-new="hospital">+ Hospital</button>
-      <button data-new="basecamp">+ Parking / Basecamp</button>
-      <button data-new="notes">+ Notes</button>
-    </div>
-  </div>
-
-</div>
-</div>
+<div class="page-wrap" id="pagesRoot"></div>
 </div>
 
 </div><!-- end .workspace -->
 
 <!-- Tweaks panel -->
-<div class="tweaks">
-  <h4>Tweaks <button class="close" id="tweaksClose">×</button></h4>
-  <div class="row">
-    <label>Page size</label>
-    <div style="display:flex;gap:4px;">
-      <button id="btnSizeA4" class="size-btn active" title="A4 (210×297mm)">A4</button>
-      <button id="btnSizeLetter" class="size-btn" title="US Letter (8.5×11in)">Letter</button>
-    </div>
-  </div>
-  <div class="row">
-    <label>Logo slot</label>
-    <button class="toggle" data-tweak="showLogo" title="Show/hide logos"></button>
-  </div>
-</div>
+<div id="tweaksPanelRoot"></div>
 
-<script src="logos.inline.js"></script>
-<script src="src/utils.js"></script>
-<script src="src/state.js"></script>
-<script src="src/parser.js"></script>
-<script src="src/intake.js"></script>
-<script src="src/reflow.js"></script>
-<script src="src/render.js"></script>
-<script src="app.js"></script>
+<script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

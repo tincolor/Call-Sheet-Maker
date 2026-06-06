@@ -1,27 +1,42 @@
-// ============================================================
-// LLM INTAKE SIDEBAR MODULE
-// ============================================================
+import { signal } from '@preact/signals';
+import { app, save } from './store.js';
+import { uid, clamp } from './utils.js';
+import { INTAKE_WIDTH_KEY } from './constants.js';
+import { renderSheet } from './render/sheet.js';
 
-let intakeDraft = null; // parsed JSON awaiting verify
+// ---- Intake flow signals (read by IntakeSidebar.jsx and csv.js) ----
+export const intakeStepSignal = signal('input'); // 'input' | 'loading' | 'verify' | 'error'
+export const intakeErrorSignal = signal('');
+export const intakeRepairNoteSignal = signal('');
 
-function initIntake() {
-  const btn = document.getElementById('intakeInterpret');
-  btn.addEventListener('click', runIntake);
-  document.getElementById('intakeCancel').addEventListener('click', resetIntake);
-  document.getElementById('intakePublish').addEventListener('click', publishIntake);
-  document.getElementById('intakeRetry').addEventListener('click', runIntake);
+export let intakeDraft = null;
 
-  const keyInput = document.getElementById('apiKeyInput');
-  const keySave  = document.getElementById('apiKeySave');
-  const keyClear = document.getElementById('apiKeyClear');
-  const keyModel = document.getElementById('apiKeyModel');
+export function setIntakeDraft(val) { intakeDraft = val; }
+export function setIntakeStep(step) { intakeStepSignal.value = step; }
 
-  if (keyInput && keySave && keyClear && keyModel) {
-    initApiKey();
-  }
+// ---- Claude API key handling ----
+const API_KEY_STORAGE = 'callsheet.claudeApiKey';
+const API_MODEL_STORAGE = 'callsheet.claudeModel';
+
+export function getApiKey() {
+  try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch { return ''; }
 }
 
-async function completeWithClaude(userContent) {
+export function getApiModel() {
+  try { return localStorage.getItem(API_MODEL_STORAGE) || 'claude-sonnet-4-5'; } catch { return 'claude-sonnet-4-5'; }
+}
+
+export function saveApiKey(key, model) {
+  if (key) localStorage.setItem(API_KEY_STORAGE, key);
+  else localStorage.removeItem(API_KEY_STORAGE);
+  if (model) localStorage.setItem(API_MODEL_STORAGE, model);
+}
+
+export function clearApiKey() {
+  localStorage.removeItem(API_KEY_STORAGE);
+}
+
+export async function completeWithClaude(userContent) {
   const key = getApiKey();
   if (key) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -55,7 +70,7 @@ async function completeWithClaude(userContent) {
   });
 }
 
-const INTAKE_SYSTEM = `You convert raw production text (messages, emails, notes; may be mixed English/Japanese) into a compact JSON call-sheet object. Keep output SHORT — omit any key whose value is empty. Use this shape:
+export const INTAKE_SYSTEM = `You convert raw production text (messages, emails, notes; may be mixed English/Japanese) into a compact JSON call-sheet object. Keep output SHORT — omit any key whose value is empty. Use this shape:
 
 { "meta": { "company"?, "address"?, "project"?, "client"?, "mainLocation"?, "date"?, "day"?, "shootCall"?, "emergency"?, "weatherCallout"?, "headerNote"?, "sunrise"?, "sunset"? },
   "sections": [
@@ -72,7 +87,7 @@ Rules: only include sections that have content. Inside each section, only includ
 
 // Attempt to repair JSON that was truncated mid-output (Haiku 1024-token cap).
 // Strategy: close any open string, then close arrays/objects in reverse-stack order.
-function tryRepairJSON(s) {
+export function tryRepairJSON(s) {
   s = s.trim();
   // strip trailing comma / dangling key
   s = s.replace(/,\s*$/, '');
@@ -98,13 +113,12 @@ function tryRepairJSON(s) {
   return s;
 }
 
-async function runIntake() {
-  const txt = document.getElementById('intakeInput').value.trim();
-  if (!txt) { alert('Paste some text first.'); return; }
-  setIntakeStep('loading');
+export async function runIntake(text) {
+  if (!text) { alert('Paste some text first.'); return; }
+  intakeStepSignal.value = 'loading';
   try {
     const raw = await completeWithClaude(
-      `${INTAKE_SYSTEM}\n\n--- INPUT START ---\n${txt}\n--- INPUT END ---`
+      `${INTAKE_SYSTEM}\n\n--- INPUT START ---\n${text}\n--- INPUT END ---`
     );
     const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
     let parsed, repairedNote = '';
@@ -120,95 +134,39 @@ async function runIntake() {
       }
     }
     intakeDraft = parsed;
-    renderIntakePreview(repairedNote);
-    setIntakeStep('verify');
+    intakeRepairNoteSignal.value = repairedNote;
+    intakeStepSignal.value = 'verify';
   } catch (e) {
-    document.getElementById('intakeError').textContent = e.message || String(e);
-    setIntakeStep('error');
+    intakeErrorSignal.value = e.message || String(e);
+    intakeStepSignal.value = 'error';
   }
 }
 
-function setIntakeStep(step) {
-  ['input','loading','verify','error'].forEach(s =>
-    document.getElementById('intake-' + s).style.display = (s === step ? '' : 'none'));
-}
-
-function resetIntake() {
+export function resetIntake() {
   intakeDraft = null;
-  document.getElementById('intakeInput').value = '';
-  setIntakeStep('input');
+  intakeErrorSignal.value = '';
+  intakeRepairNoteSignal.value = '';
+  intakeStepSignal.value = 'input';
 }
 
-function renderIntakePreview(note = '') {
-  const host = document.getElementById('intakePreview');
-  host.innerHTML = '';
-  if (note) {
-    const n = document.createElement('div');
-    n.style.cssText = 'background:#FFF3B0;border:1px solid #CBB04F;color:#5A4700;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:12px;';
-    n.textContent = note;
-    host.appendChild(n);
-  }
-
-  // META
-  const meta = intakeDraft.meta || {};
-  const curMeta = state.meta;
-  const metaTable = document.createElement('div');
-  metaTable.className = 'preview-block';
-  metaTable.innerHTML = `<h4>Header</h4><table class="pv"><tbody>${
-    Object.keys(meta).map(k => {
-      const v = meta[k] || '';
-      const changed = (v || '') !== (curMeta[k] || '');
-      return `<tr><td class="k">${esc(k)}</td><td class="v ${changed ? 'changed' : ''}" contenteditable="true" data-scope="meta" data-k="${esc(k)}">${esc(v)}</td></tr>`;
-    }).join('')
-  }</tbody></table>`;
-  host.appendChild(metaTable);
-
-  // SECTIONS
-  (intakeDraft.sections || []).forEach((sec, si) => {
-    const block = document.createElement('div');
-    block.className = 'preview-block';
-    block.innerHTML = `<h4>${esc(sec.title || sec.type)} <span class="tag">${esc(sec.type)}</span></h4>`;
-    if (Array.isArray(sec.data)) {
-      if (sec.data.length === 0) { block.innerHTML += '<p class="muted">(empty)</p>'; host.appendChild(block); return; }
-      const cols = Object.keys(sec.data[0]);
-      block.innerHTML += `<table class="pv"><thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${
-        sec.data.map((r, ri) => `<tr>${
-          cols.map(c => `<td class="v" contenteditable="true" data-scope="sec.row" data-si="${si}" data-ri="${ri}" data-c="${esc(c)}">${esc(r[c] != null ? r[c] : '')}</td>`).join('')
-        }</tr>`).join('')
-      }</tbody></table>`;
-    } else if (sec.data && typeof sec.data === 'object') {
-      const cols = Object.keys(sec.data);
-      block.innerHTML += `<table class="pv"><tbody>${
-        cols.map(c => `<tr><td class="k">${esc(c)}</td><td class="v" contenteditable="true" data-scope="sec.obj" data-si="${si}" data-c="${esc(c)}">${esc(sec.data[c] || '')}</td></tr>`).join('')
-      }</tbody></table>`;
-    }
-    host.appendChild(block);
-  });
-
-  // wire edits back into intakeDraft
-  host.querySelectorAll('[data-scope]').forEach(el => {
-    el.addEventListener('input', () => {
-      const s = el.dataset.scope;
-      if (s === 'meta') intakeDraft.meta[el.dataset.k] = el.textContent;
-      if (s === 'sec.row') intakeDraft.sections[+el.dataset.si].data[+el.dataset.ri][el.dataset.c] = el.textContent;
-      if (s === 'sec.obj') intakeDraft.sections[+el.dataset.si].data[el.dataset.c] = el.textContent;
-    });
-  });
-}
-
-function publishIntake() {
+export function publishIntake() {
   if (!intakeDraft) return;
-  // merge meta
-  Object.assign(state.meta, intakeDraft.meta || {});
-  // merge / replace sections: assign new uids and append to existing
+  Object.assign(app.state.meta, intakeDraft.meta || {});
   if (Array.isArray(intakeDraft.sections) && intakeDraft.sections.length) {
     const action = confirm('OK = Replace existing sections with interpreted ones.\nCancel = Append to existing sections.');
     const fresh = intakeDraft.sections.map(s => ({ ...s, id: uid() }));
-    if (action) state.sections = fresh;
-    else state.sections.push(...fresh);
+    if (action) app.state.sections = fresh;
+    else app.state.sections.push(...fresh);
   }
   save();
-  switchTab('sheet');
   renderSheet();
   resetIntake();
+}
+
+export function setIntakeWidth(width, persist = true) {
+  const px = Math.round(clamp(width, 200, 520));
+  document.documentElement.style.setProperty('--intake-w', `${px}px`);
+  if (persist) {
+    try { localStorage.setItem(INTAKE_WIDTH_KEY, String(px)); } catch {}
+  }
 }

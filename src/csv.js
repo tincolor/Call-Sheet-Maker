@@ -1,16 +1,18 @@
-// ============================================================
-// CSV IMPORT / EXPORT MODULE
-// ============================================================
+import { app, save } from './store.js';
+import { uid, esc } from './utils.js';
+import { DEFAULT_DAY } from './data.js';
+import { renderSheet } from './render/sheet.js';
+import { setIntakeStep, setIntakeDraft } from './intake.js';
 
-function csvEscape(s) {
+export function csvEscape(s) {
   s = s == null ? '' : String(s);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function dayToCSVLines(day) {
+export function dayToCSVLines(day) {
   const lines = [];
   lines.push('# META'); lines.push('key,value');
-  Object.entries(day.meta).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
+  Object.entries(day.meta).forEach(([k, v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
   lines.push('');
   day.sections.forEach(sec => {
     lines.push(`# ${sec.type.toUpperCase()} · ${sec.title}`);
@@ -21,19 +23,19 @@ function dayToCSVLines(day) {
       sec.data.forEach(r => lines.push(cols.map(c => csvEscape(r[c])).join(',')));
     } else if (sec.data && typeof sec.data === 'object') {
       lines.push('key,value');
-      Object.entries(sec.data).forEach(([k,v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
+      Object.entries(sec.data).forEach(([k, v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
     }
     lines.push('');
   });
   return lines;
 }
 
-function exportCSV() {
+export function exportCSV() {
   // Ask scope: current day only, or all days concatenated
   let scope = 'current';
-  if (store.days.length > 1) {
+  if (app.store.days.length > 1) {
     const choice = confirm(
-      `You have ${store.days.length} days.\n\n` +
+      `You have ${app.store.days.length} days.\n\n` +
       `OK = Export ALL days (one file, split by "# DAY" markers)\n` +
       `Cancel = Export current day only`
     );
@@ -41,9 +43,9 @@ function exportCSV() {
   }
 
   const lines = [];
-  const daysToExport = scope === 'all' ? store.days : [state];
+  const daysToExport = scope === 'all' ? app.store.days : [app.state];
   daysToExport.forEach((day, i) => {
-    const label = (day.meta?.date || `Day ${day.meta?.day || (i+1)}`).trim();
+    const label = (day.meta?.date || `Day ${day.meta?.day || (i + 1)}`).trim();
     if (scope === 'all') {
       lines.push(`# DAY · ${label}`);
       lines.push('');
@@ -54,11 +56,11 @@ function exportCSV() {
   const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `call-sheet-${(state.meta.date || 'export').replace(/[^\w.-]/g,'_')}.csv`;
+  a.download = `call-sheet-${(app.state.meta.date || 'export').replace(/[^\w.-]/g, '_')}.csv`;
   a.click();
 }
 
-function importCSV() {
+export function importCSV() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = '.csv,text/csv';
   inp.onchange = () => {
@@ -71,9 +73,7 @@ function importCSV() {
 
         if (drafts.length === 1) {
           // Single day — go through the verify/preview flow
-          intakeDraft = drafts[0];
-          renderIntakePreview();
-          switchTab('intake');
+          setIntakeDraft(drafts[0]);
           setIntakeStep('verify');
           return;
         }
@@ -81,7 +81,7 @@ function importCSV() {
         // Multi-day — create all days at once, after confirming
         const action = confirm(
           `This CSV contains ${drafts.length} days:\n\n` +
-          drafts.map((d, i) => `  ${i+1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
+          drafts.map((d, i) => `  ${i + 1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
           `\n\nOK   = Replace all existing days with these\n` +
           `Cancel = Append these as new days (keep existing)`
         );
@@ -95,16 +95,13 @@ function importCSV() {
         }));
 
         if (action) {
-          store.days = fresh;
+          app.store.days = fresh;
         } else {
-          store.days.push(...fresh);
+          app.store.days.push(...fresh);
         }
-        store.currentDayId = fresh[0].id;
-        state = currentDay();
+        app.store.currentDayId = fresh[0].id;
         save();
         renderSheet();
-        renderDaySwitcher();
-        switchTab('sheet');
       } catch (e) {
         alert('CSV parse error: ' + e.message);
       }
@@ -114,13 +111,13 @@ function importCSV() {
   inp.click();
 }
 
-function parseCSV(txt) {
+export function parseCSV(txt) {
   // tolerant CSV parser — quoted strings, escaped quotes
   const rows = []; let row = []; let cur = ''; let q = false;
   for (let i = 0; i < txt.length; i++) {
     const ch = txt[i];
     if (q) {
-      if (ch === '"' && txt[i+1] === '"') { cur += '"'; i++; }
+      if (ch === '"' && txt[i + 1] === '"') { cur += '"'; i++; }
       else if (ch === '"') q = false;
       else cur += ch;
     } else {
@@ -135,7 +132,7 @@ function parseCSV(txt) {
   return rows;
 }
 
-function parseCSVtoDrafts(txt) {
+export function parseCSVtoDrafts(txt) {
   const rows = parseCSV(txt);
   const drafts = [];
   let draft = null;
@@ -163,7 +160,7 @@ function parseCSVtoDrafts(txt) {
       const body = first.slice(2).trimStart();
       const [typeRaw, ...titleParts] = body.split(' · ');
       const type = typeRaw.trim().toLowerCase();
-      const VALID = ['schedule','contacts','equipment','hospital','basecamp','notes'];
+      const VALID = ['schedule', 'contacts', 'equipment', 'hospital', 'basecamp', 'notes'];
       if (!VALID.includes(type)) {
         // comment — ignore but end any current section parse so stray keys don't
         // leak into the last section's data
@@ -172,7 +169,7 @@ function parseCSVtoDrafts(txt) {
       }
       ensureDraft();
       const title = titleParts.join(' · ').trim();
-      cur = { id: uid(), type, title, data: ['hospital','basecamp','notes'].includes(type) ? {} : [] };
+      cur = { id: uid(), type, title, data: ['hospital', 'basecamp', 'notes'].includes(type) ? {} : [] };
       draft.sections.push(cur);
       mode = 'sec'; header = null; continue;
     }
@@ -195,7 +192,7 @@ function parseCSVtoDrafts(txt) {
 }
 
 // Legacy single-draft shim (still used by any callers)
-function parseCSVtoDraft(txt) {
+export function parseCSVtoDraft(txt) {
   const drafts = parseCSVtoDrafts(txt);
   return drafts[0] || { meta: {}, sections: [] };
 }
