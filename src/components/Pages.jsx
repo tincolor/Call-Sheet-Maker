@@ -4,10 +4,10 @@ import { SheetHeader } from './SheetHeader.jsx';
 import { Sections, addSection } from './Sections.jsx';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
-import { adjustSectionBreakSpacing } from '../render/reflow.js';
+import { runLayoutReflow } from '../render/reflow.js';
 
 function splitIntoPages(sections, pageBreaks) {
-  const breakBefore = new Set(pageBreaks.filter(b => b.before && !b.auto).map(b => b.before));
+  const breakBefore = new Set(pageBreaks.filter(b => b.before).map(b => b.before));
   const pages = [[]];
   for (const sec of sections) {
     if (breakBefore.has(sec.id)) pages.push([]);
@@ -21,7 +21,7 @@ export function Pages() {
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
 
   useLayoutEffect(() => {
-    requestAnimationFrame(adjustSectionBreakSpacing);
+    requestAnimationFrame(runLayoutReflow);
   }, [store]);
 
   if (!state) return null;
@@ -47,6 +47,7 @@ export function Pages() {
         const isFirst = pageIdx === 0;
         const isLast = pageIdx === pageGroups.length - 1;
         const nextFirstId = !isLast ? pageGroups[pageIdx + 1]?.[0]?.id : null;
+        const isAutoBreak = nextFirstId ? pageBreaks.some(b => b.before === nextFirstId && b.auto) : false;
 
         return (
           <div class="paper" id={isFirst ? 'paper' : undefined} key={`page-${pageIdx}`}>
@@ -71,9 +72,18 @@ export function Pages() {
             )}
             {!isLast && nextFirstId && (
               <div class="page-break-ctrl">
-                <button class="page-break-rm" onClick={() => removeBreak(nextFirstId)}>
-                  ✕ remove page break
-                </button>
+                {isAutoBreak ? (
+                  <div class="pbreak-marker">
+                    <span>PAGE BREAK (auto)</span>
+                  </div>
+                ) : (
+                  <div class="pbreak-marker">
+                    <span>PAGE BREAK</span>
+                    <button class="pbreak-rm" onClick={() => removeBreak(nextFirstId)}>
+                      ✕ remove
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

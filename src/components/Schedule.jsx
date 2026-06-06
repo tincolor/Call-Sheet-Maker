@@ -1,19 +1,13 @@
-import { useRef, useLayoutEffect } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { save } from '../store.js';
 import { storeSignal } from '../signals.js';
 import { confirmDel } from '../utils.js';
 import { recalculateScheduleTimes, togglePageBreakRow } from '../render/schedule.js';
-import { adjustSectionBreakSpacing } from '../render/reflow.js';
 import { drag } from '../render/drag.js';
 
 export function Schedule({ sec }) {
   const store = storeSignal.value;
-  
-  // Trigger layout adjustment after preact finishes DOM updates
-  useLayoutEffect(() => {
-    requestAnimationFrame(adjustSectionBreakSpacing);
-  }, [store]);
 
   const pageBreaks = store?.days?.find(d => d.id === store.currentDayId)?.pageBreaks || [];
   
@@ -71,17 +65,11 @@ export function Schedule({ sec }) {
     save();
   };
 
-  const handleRemoveBreak = (breakRowIdx, isAuto) => {
+  const handleRemoveBreak = (breakRowIdx) => {
     let day = store.days.find(d => d.id === store.currentDayId) || store.days[0];
     day.pageBreaks = day.pageBreaks.filter(b =>
       !(b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx)
     );
-    if (isAuto) {
-      if (!day.noBreakPins) day.noBreakPins = [];
-      if (!day.noBreakPins.some(p => p.sectionId === sec.id && p.idx === breakRowIdx)) {
-        day.noBreakPins.push({ sectionId: sec.id, idx: breakRowIdx });
-      }
-    }
     save();
   };
 
@@ -90,15 +78,14 @@ export function Schedule({ sec }) {
       {segs.map((seg, segIdx) => {
         const isLast = segIdx === segs.length - 1;
         const breakRowIdx = seg.start;
-        const isAuto = pageBreaks.some(b => b.auto && b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx);
 
         return (
           <div key={segIdx}>
             {segIdx > 0 && (
               <div class="sched-cont-wrap">
                 <div class="brk-bar">
-                  <span>{isAuto ? 'Page Break (auto)' : 'Page Break'}</span>
-                  <button class="brk-remove" onClick={() => handleRemoveBreak(breakRowIdx, isAuto)}>
+                  <span>Page Break</span>
+                  <button class="brk-remove" onClick={() => handleRemoveBreak(breakRowIdx)}>
                     Remove
                   </button>
                 </div>

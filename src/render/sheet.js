@@ -1,10 +1,10 @@
 import { app } from '../store.js';
-import { isReflowing, autoReflow } from './reflow.js';
+import { isReflowing, runLayoutReflow } from './reflow.js';
 
 export function renderSheet() {
   applyTweaks();
   // After layout settles, auto-calculate page breaks for schedule sections
-  if (!isReflowing()) requestAnimationFrame(autoReflow);
+  if (!isReflowing()) requestAnimationFrame(runLayoutReflow);
 }
 
 export function applyTweaks() {
