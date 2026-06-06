@@ -31,7 +31,7 @@ function _printHeight(el, printMarginBotPx) {
   // Strip schedule continuation screen-only spacing
   el.querySelectorAll('.sched-cont-content').forEach(cont => {
     const screenPad = parseFloat(cont.style.paddingTop) || 0;
-    const printPadPx = _pxForMM(12); // print override: padding-top: 12mm
+    const printPadPx = _pxForMM(14); // print override: padding-top: 14mm
     h -= Math.max(0, screenPad - printPadPx);
   });
   el.querySelectorAll('.sched-cont-wrap .brk-bar').forEach(bar => {
@@ -43,138 +43,130 @@ function _printHeight(el, printMarginBotPx) {
 // Measures rendered section print-heights and inserts auto breaks wherever
 // sections would overflow a page.  Uses print CSS values for padding/spacing
 // rather than screen values, since the two differ significantly.
-export function autoReflowSections() {
-  if (_reflowing) return;
+export function recalculateAllPageBreaks() {
+  if (_reflowing) return false;
   _mmCache = {}; // clear cache so zoom changes are picked up
 
-  // Print paper uses padding: 12mm (all sides), not the screen 14/12/16mm.
+  // Print paper uses padding: 14mm top, 16mm bottom, 12mm sides.
   const pageHPx  = _pxForMM(app.store.tweaks.paperSize === 'letter' ? 279.4 : 297);
-  const padPx    = _pxForMM(12); // print padding: equal on all sides
-  const contentH = pageHPx - padPx - padPx;
+  const padTopPx = _pxForMM(14);
+  const padBotPx = _pxForMM(16);
+  const contentH = pageHPx - padTopPx - padBotPx;
   const sectionMarginBotPx = _pxForMM(4); // print: sections-body > .section { margin-bottom: 4mm }
 
   const firstPaper = document.querySelector('.paper');
-  if (!firstPaper) return;
+  if (!firstPaper) return false;
 
   // Header height is the same in screen and print
   let headerH = 0;
   firstPaper.querySelectorAll('.hd, .hd2').forEach(el => {
     headerH += el.getBoundingClientRect().height;
   });
-  // No sections-body margin-top in print (that is screen-only via .hd2 ~ .sections-body)
-  const headerGapPx = 0;
+  // Gap below header is 8mm
+  const headerGapPx = _pxForMM(8);
 
   const page1Avail = contentH - headerH - headerGapPx;
   const pageNAvail = contentH;
 
   const secEls = Array.from(document.querySelectorAll('.section[data-id]'));
-  if (!secEls.length) return;
+  if (!secEls.length) return false;
 
-  const neededBreaks = [];
+  // Gather current manual breaks
+  const manualSectionBreaks = new Set(
+    app.state.pageBreaks
+      .filter(b => b.before && !b.auto)
+      .map(b => b.before)
+  );
+
+  // Arrays to hold the new auto-breaks we calculate
+  const neededSectionBreaks = [];
+
   let remaining = page1Avail;
 
   secEls.forEach((el, i) => {
-    const h = _printHeight(el, sectionMarginBotPx);
-    if (i > 0 && remaining - h < 0) {
-      neededBreaks.push(el.dataset.id);
-      remaining = pageNAvail - h;
+    const id = el.dataset.id;
+    const isSchedule = el.classList.contains('section--schedule');
+
+    let isNewPage = false;
+    if (i > 0 && manualSectionBreaks.has(id)) {
+      remaining = pageNAvail;
+      isNewPage = true;
+    }
+
+    if (isSchedule) {
+      const h = _printHeight(el, sectionMarginBotPx);
+
+      // If the schedule fits within a single page, treat it as an atomic block
+      if (h <= pageNAvail) {
+        if (i > 0 && !isNewPage && remaining - h < 0) {
+          // Doesn't fit on current page — push to next page
+          neededSectionBreaks.push(id);
+          remaining = pageNAvail - h;
+        } else {
+          remaining -= h;
+        }
+      } else {
+        // Schedule is larger than one page: it must start on the current page and
+        // overflow into subsequent pages. Only push to next page if there's not
+        // enough room to even begin it (min: section-head + table-head + one row ~40px).
+        const secHead = el.querySelector('.section-head');
+        const tableHead = el.querySelector('table thead');
+        const secHeadH = secHead ? secHead.getBoundingClientRect().height : 0;
+        const tableHeadH = tableHead ? tableHead.getBoundingClientRect().height : 0;
+        const minH = secHeadH + tableHeadH + 40;
+
+        if (i > 0 && !isNewPage && remaining < minH) {
+          neededSectionBreaks.push(id);
+          remaining = pageNAvail;
+          isNewPage = true;
+        }
+
+        // The schedule consumes all of the current page's remaining space and
+        // then continues across whole pages. Calculate how much is left on the
+        // final page it occupies.
+        const leftover = h - remaining;
+        if (leftover > 0) {
+          const lastPageOccupied = leftover % pageNAvail;
+          remaining = lastPageOccupied > 0 ? pageNAvail - lastPageOccupied : pageNAvail;
+        } else {
+          remaining -= h;
+        }
+      }
     } else {
-      remaining -= h;
+      // Non-schedule section: always treated as an atomic block
+      const h = _printHeight(el, sectionMarginBotPx);
+      if (i > 0 && !isNewPage && remaining - h < 0) {
+        neededSectionBreaks.push(id);
+        remaining = pageNAvail - h;
+      } else {
+        remaining -= h;
+      }
     }
   });
 
-  const curAuto = app.state.pageBreaks
+  // Check if the calculated auto-breaks differ from current auto-breaks
+  const curAutoSections = app.state.pageBreaks
     .filter(b => b.auto && b.before)
     .map(b => b.before).sort().join(',');
-  const wantAuto = [...neededBreaks].sort().join(',');
+  const wantAutoSections = [...neededSectionBreaks].sort().join(',');
 
-  if (curAuto !== wantAuto) {
+  if (curAutoSections !== wantAutoSections) {
     _reflowing = true;
-    app.state.pageBreaks = app.state.pageBreaks.filter(b => !(b.auto && b.before));
-    neededBreaks.forEach(id => app.state.pageBreaks.push({ before: id, auto: true }));
-    commit();
-    requestAnimationFrame(() => {
-      _reflowing = false;
-      requestAnimationFrame(adjustSectionBreakSpacing);
-    });
-  }
-}
-
-export function autoReflow() {
-  if (_reflowing) return;
-
-  const mmToPx  = 96 / 25.4;
-  const pageHPx = (app.store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
-  const padBotPx = 16 * mmToPx;
-
-  const needed = [];
-
-  app.state.sections.forEach(sec => {
-    if (sec.type !== 'schedule') return;
-    const secEl = document.querySelector(`.section[data-id="${sec.id}"]`);
-    if (!secEl) return;
-    const secBody = secEl.querySelector('.section-body');
-    if (!secBody) return;
-
-    const paperEl = secEl.closest('.paper');
-    if (!paperEl) return;
-    const paperTop = paperEl.getBoundingClientRect().top;
-
-    let extraScreenH = 0;
-
-    Array.from(secBody.children).forEach(child => {
-      if (child.classList.contains('sched-cont-wrap')) {
-        extraScreenH += child.getBoundingClientRect().height;
-        return;
-      }
-      if (child.tagName !== 'TABLE') return;
-
-      Array.from(child.querySelectorAll('tbody tr')).forEach(tr => {
-        if (tr.classList.contains('sched-page-footer')) return;
-        const dataEl = tr.querySelector('[data-i]');
-        if (!dataEl) return;
-        const idx = +dataEl.dataset.i;
-        if (idx === 0) return;
-
-        const logicalBottom = tr.getBoundingClientRect().bottom - extraScreenH - paperTop;
-        const pageNum  = Math.floor(logicalBottom / pageHPx);
-        const pageBotY = (pageNum + 1) * pageHPx - padBotPx;
-
-        if (logicalBottom > pageBotY) {
-          const pinned = app.state.noBreakPins && app.state.noBreakPins.some(p => p.sectionId === sec.id && p.idx === idx);
-          if (!pinned) needed.push({ sectionId: sec.id, idx });
-        }
-      });
-    });
-  });
-
-  const seen = new Set();
-  const neededUniq = needed.filter(b => {
-    const k = `${b.sectionId}:${b.idx}`;
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
-  });
-
-  const curAuto = app.state.pageBreaks
-    .filter(b => b.auto && b.beforeRow)
-    .map(b => `${b.beforeRow.sectionId}:${b.beforeRow.idx}`)
-    .sort().join(',');
-  const wantAuto = neededUniq
-    .map(b => `${b.sectionId}:${b.idx}`)
-    .sort().join(',');
-
-  if (curAuto !== wantAuto) {
-    _reflowing = true;
+    
+    // Clear all auto breaks
     app.state.pageBreaks = app.state.pageBreaks.filter(b => !b.auto);
-    neededUniq.forEach(b =>
-      app.state.pageBreaks.push({ beforeRow: { sectionId: b.sectionId, idx: b.idx }, auto: true })
-    );
+
+    // Add new auto section breaks
+    neededSectionBreaks.forEach(secId => {
+      app.state.pageBreaks.push({ before: secId, auto: true });
+    });
+
     commit();
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      _reflowing = false;
-      adjustSectionBreakSpacing();
-    }));
+    _reflowing = false;
+    return true;
   }
+
+  return false;
 }
 
 // Pushes schedule continuation pages to the correct visual page boundary on screen.
@@ -188,7 +180,7 @@ function _adjustPaper(paper) {
   const mmToPx      = 96 / 25.4;
   const pageH       = (app.store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
   const pageSlot    = pageH + 20;
-  const topMarginPx = 26 * mmToPx;
+  const topMarginPx = 14 * mmToPx;
 
   paper.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
   paper.querySelectorAll('.sched-cont-wrap .brk-bar').forEach(el => {
@@ -233,4 +225,15 @@ function _adjustPaper(paper) {
     }
     applyPadding(padding);
   });
+}
+
+export function runLayoutReflow() {
+  if (_reflowing) return;
+
+  _mmCache = {};
+
+  const changed = recalculateAllPageBreaks();
+  if (changed) return;
+
+  adjustSectionBreakSpacing();
 }
