@@ -54,6 +54,8 @@
     height: calc(100vh - 44px);
     overflow: hidden;
   }
+  /* Mount-point divs are invisible to the flex engine; their Preact children participate directly. */
+  #intakeSidebarRoot { display: contents; }
   .intake-sidebar {
     width: var(--intake-w);
     min-width: 200px;
