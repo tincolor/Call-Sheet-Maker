@@ -1,19 +1,49 @@
 import { useRef, useLayoutEffect } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { save } from '../store.js';
-import { storeSignal } from '../signals.js';
+import { storeSignal, scheduleOverflowSignal } from '../signals.js';
 import { confirmDel } from '../utils.js';
 import { recalculateScheduleTimes, togglePageBreakRow } from '../render/schedule.js';
-import { adjustSectionBreakSpacing } from '../render/reflow.js';
+import { scheduleReflow, adjustSectionBreakSpacing } from '../render/reflow.js';
 import { drag } from '../render/drag.js';
 
 export function Schedule({ sec }) {
   const store = storeSignal.value;
-  
-  // Trigger layout adjustment after preact finishes DOM updates
+  const overflowInfo = scheduleOverflowSignal.value?.sectionId === sec.id
+    ? scheduleOverflowSignal.value
+    : null;
+
+  const wrapRef = useRef(null);
+  const lineRef = useRef(null);
+
   useLayoutEffect(() => {
-    requestAnimationFrame(adjustSectionBreakSpacing);
+    requestAnimationFrame(() => {
+      adjustSectionBreakSpacing();
+      scheduleReflow();
+    });
   }, [store]);
+
+  // Position the overflow indicator line at the page boundary within the schedule.
+  useLayoutEffect(() => {
+    const line = lineRef.current;
+    const wrap = wrapRef.current;
+    if (!line || !wrap) return;
+    if (!overflowInfo) {
+      line.style.top = '';
+      line.style.display = 'none';
+      return;
+    }
+    const secEl = wrap.closest('.section');
+    if (!secEl) return;
+    const secRect = secEl.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    // overflowPx is measured without margins; subtract 4mm margin added to section height
+    const mmToPx = 96 / 25.4;
+    const pageLineFromSecTop = secRect.height - overflowInfo.overflowPx + 4 * mmToPx;
+    const pageLineFromWrapTop = pageLineFromSecTop - (wrapRect.top - secRect.top);
+    line.style.top = `${Math.max(0, Math.round(pageLineFromWrapTop))}px`;
+    line.style.display = '';
+  }, [store, overflowInfo]);
 
   const pageBreaks = store?.days?.find(d => d.id === store.currentDayId)?.pageBreaks || [];
   
@@ -71,34 +101,28 @@ export function Schedule({ sec }) {
     save();
   };
 
-  const handleRemoveBreak = (breakRowIdx, isAuto) => {
+  const handleRemoveBreak = (breakRowIdx) => {
     let day = store.days.find(d => d.id === store.currentDayId) || store.days[0];
     day.pageBreaks = day.pageBreaks.filter(b =>
       !(b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx)
     );
-    if (isAuto) {
-      if (!day.noBreakPins) day.noBreakPins = [];
-      if (!day.noBreakPins.some(p => p.sectionId === sec.id && p.idx === breakRowIdx)) {
-        day.noBreakPins.push({ sectionId: sec.id, idx: breakRowIdx });
-      }
-    }
     save();
   };
 
   return (
-    <div>
+    <div ref={wrapRef} class="sched-wrap">
+      {overflowInfo && <div ref={lineRef} class="sched-overflow-line" style="display:none" />}
       {segs.map((seg, segIdx) => {
         const isLast = segIdx === segs.length - 1;
         const breakRowIdx = seg.start;
-        const isAuto = pageBreaks.some(b => b.auto && b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx);
 
         return (
           <div key={segIdx}>
             {segIdx > 0 && (
               <div class="sched-cont-wrap">
                 <div class="brk-bar">
-                  <span>{isAuto ? 'Page Break (auto)' : 'Page Break'}</span>
-                  <button class="brk-remove" onClick={() => handleRemoveBreak(breakRowIdx, isAuto)}>
+                  <span>Page Break</span>
+                  <button class="brk-remove" onClick={() => handleRemoveBreak(breakRowIdx)}>
                     Remove
                   </button>
                 </div>

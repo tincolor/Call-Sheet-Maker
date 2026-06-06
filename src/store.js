@@ -36,6 +36,11 @@ export function fixupLogos(day) {
     if (day.logos[1] && !day.logos[1].dataUrl) day.logos[1].dataUrl = logoSa;
   }
   if (!day.pageBreaks) day.pageBreaks = [];
+  // Strip any auto-break entries that were persisted by the old reflow engine.
+  // Auto breaks are now transient (computed in autoBreaksSignal, never saved).
+  day.pageBreaks = day.pageBreaks.filter(b => !b.auto);
+  // noBreakPins were tied to the old auto row-break system — safe to remove.
+  delete day.noBreakPins;
   normalizeMultilineFields(day);
 }
 

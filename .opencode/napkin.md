@@ -20,6 +20,11 @@
 - Keeping `intakeDraft` as a plain module-level variable (not a signal) works fine when step-signal changes trigger re-renders that read the draft; avoids signal overhead for a large mutable object.
 - For imperative contenteditable preview tables, use `useEffect` on step + a `ref` to the host div — lets DOM-building stay imperative without fighting Preact's diffing.
 
+## Patterns That Work (continued)
+- Auto page breaks must be transient signals (`autoBreaksSignal`), never written to `state.pageBreaks`. The old approach persisted them with `auto: true` to localStorage and they went stale. The new approach: reflow writes to a signal; `Pages.jsx` merges signal + manual breaks at render time; localStorage only ever contains manual breaks.
+- Screen/print CSS alignment: removing screen-only `section { padding-top: 8px }` and adding `section { margin-bottom: 4mm }` to screen (matching print) makes `getBoundingClientRect().height` accurate for print — no JS correction needed for those values.
+- Schedule overflow indicator: use `position: absolute` inside a `position: relative` wrapper div, positioned via `useLayoutEffect` with `.closest('.section').getBoundingClientRect()` comparison. The `overflowPx` from the reflow signal drives the `top` value.
+
 ## Patterns That Don't Work
 - Leaving raw non-module scripts like `<script src="logos.inline.js"></script>` in Vite projects if they must be inlined; Vite won't bundle them without `type="module"`.
 - Calling Node `--check` syntax checks on `.jsx` files as Node does not natively support JSX.

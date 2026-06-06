@@ -60,7 +60,7 @@
     max-width: 520px;
     flex-shrink: 0;
     border-right: 1px solid var(--rule);
-    overflow-y: auto;
+    overflow: hidden;
     background: var(--bg);
     display: flex;
     flex-direction: column;
@@ -100,6 +100,9 @@
     padding: 12px 14px;
     font-size: 12px;
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
   .intake-sidebar .intake h2 { display: none; }
   .intake-sidebar .intake .lede { font-size: 11px; color: var(--ink-3); margin-bottom: 14px; line-height: 1.45; }
@@ -371,6 +374,10 @@
     letter-spacing: 0.08em; text-transform: uppercase;
   }
   .page-break-rm:hover { background: #D9534F; color: #fff; }
+  .page-break-auto-label {
+    font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
 
   /* ──────────────── SECTIONS ──────────────── */
   .sections-body { display: flex; flex-direction: column; gap: var(--section-gap); }
@@ -378,7 +385,7 @@
 
   .section {
     break-inside: avoid;
-    padding-top: 8px;
+    margin-bottom: 4mm;
   }
   .section.after-break {
     break-before: page;
@@ -647,6 +654,31 @@
     text-align: center; font-size: 9.5px; font-style: italic; color: var(--ink-3);
     padding: 5px 8px; border-top: 1px dashed var(--rule); border-bottom: none !important;
   }
+  /* Schedule overflow line — screen-only visual showing where the page boundary falls */
+  .sched-wrap { position: relative; }
+  .sched-overflow-line {
+    position: absolute;
+    left: -14px; right: -14px;
+    height: 0;
+    border-top: 2px dashed #D9534F;
+    pointer-events: none;
+    z-index: 8;
+  }
+  .sched-overflow-line::after {
+    content: "page ends here — add a row break (⤓) above to split";
+    position: absolute;
+    right: 0;
+    top: 4px;
+    font-size: 8px;
+    color: #D9534F;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--paper);
+    padding: 0 2px;
+  }
+
   /* Continuation wrapper: sits between table segments, starts a new print page */
   .sched-cont-wrap {
     break-before: page; page-break-before: always;
@@ -868,15 +900,15 @@
     .workspace { display: block !important; height: auto !important; overflow: visible !important; }
     .intake-sidebar { display: none !important; }
     .sheet-main { display: block !important; overflow: visible !important; height: auto !important; }
-    /* Hide screen-only page break labels */
+    /* Hide screen-only page break labels and overflow indicators */
     .page-header-repeat.after-break::before { display: none !important; }
+    .sched-overflow-line { display: none !important; }
     /* CRITICAL: flex parents disable page-break/break-before on children.
        Switch layout containers to block for print so fragmentation works. */
     .page-wrap { display: block; padding: 0; gap: 0; }
     .paper { display: block; box-shadow: none; width: var(--paper-w); min-height: var(--paper-h); margin: 0; padding: 14mm 12mm 16mm; }
     .paper + .paper { break-before: page; page-break-before: always; }
     .sections-body { display: block; }
-    .sections-body > .section { margin-bottom: 4mm; }
     a { color: inherit; }
     /* Force a hard page break before sections / schedule rows marked with a break. */
     .page-header-repeat.after-break { break-before: page; page-break-before: always; padding-top: 14mm !important; margin-bottom: 0; }

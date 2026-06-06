@@ -2,7 +2,6 @@ import { app, save } from './store.js';
 import { uid, esc } from './utils.js';
 import { DEFAULT_DAY } from './data.js';
 import { renderSheet } from './render/sheet.js';
-import { setIntakeStep, setIntakeDraft } from './intake.js';
 
 export function csvEscape(s) {
   s = s == null ? '' : String(s);
@@ -71,19 +70,16 @@ export function importCSV() {
         const drafts = parseCSVtoDrafts(fr.result);
         if (drafts.length === 0) { alert('No content found in CSV.'); return; }
 
-        if (drafts.length === 1) {
-          // Single day — go through the verify/preview flow
-          setIntakeDraft(drafts[0]);
-          setIntakeStep('verify');
-          return;
-        }
+        const dayList = drafts
+          .map((d, i) => `  ${i + 1}. ${d.meta?.project || d.meta?.date || d.meta?.day || '(untitled)'}`)
+          .join('\n');
 
-        // Multi-day — create all days at once, after confirming
-        const action = confirm(
-          `This CSV contains ${drafts.length} days:\n\n` +
-          drafts.map((d, i) => `  ${i + 1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
-          `\n\nOK   = Replace all existing days with these\n` +
-          `Cancel = Append these as new days (keep existing)`
+        const replace = confirm(
+          drafts.length === 1
+            ? `Import "${drafts[0].meta?.project || drafts[0].meta?.date || 'this call sheet'}"?\n\n` +
+              `OK     = Replace current day\nCancel = Add as a new day`
+            : `This CSV contains ${drafts.length} days:\n\n${dayList}\n\n` +
+              `OK     = Replace all existing days\nCancel = Append as new days`
         );
 
         const fresh = drafts.map(d => ({
@@ -94,8 +90,15 @@ export function importCSV() {
           sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
         }));
 
-        if (action) {
-          app.store.days = fresh;
+        if (replace) {
+          if (drafts.length === 1) {
+            // Replace only the current day, keep others
+            const idx = app.store.days.findIndex(d => d.id === app.store.currentDayId);
+            if (idx >= 0) app.store.days.splice(idx, 1, fresh[0]);
+            else app.store.days.unshift(fresh[0]);
+          } else {
+            app.store.days = fresh;
+          }
         } else {
           app.store.days.push(...fresh);
         }

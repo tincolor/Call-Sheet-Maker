@@ -2,12 +2,15 @@ import { Fragment } from 'preact';
 import { useLayoutEffect } from 'preact/hooks';
 import { SheetHeader } from './SheetHeader.jsx';
 import { Sections, addSection } from './Sections.jsx';
-import { storeSignal } from '../signals.js';
+import { storeSignal, autoBreaksSignal } from '../signals.js';
 import { save } from '../store.js';
-import { adjustSectionBreakSpacing } from '../render/reflow.js';
+import { scheduleReflow, adjustSectionBreakSpacing } from '../render/reflow.js';
 
 function splitIntoPages(sections, pageBreaks) {
-  const breakBefore = new Set(pageBreaks.filter(b => b.before && !b.auto).map(b => b.before));
+  const breakBefore = new Set([
+    ...pageBreaks.filter(b => b.before).map(b => b.before),  // manual breaks
+    ...autoBreaksSignal.value,                                 // auto breaks (transient)
+  ]);
   const pages = [[]];
   for (const sec of sections) {
     if (breakBefore.has(sec.id)) pages.push([]);
@@ -18,15 +21,17 @@ function splitIntoPages(sections, pageBreaks) {
 
 export function Pages() {
   const store = storeSignal.value;
+  const autoBreaks = autoBreaksSignal.value; // subscribe so re-render fires when auto breaks change
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
 
   useLayoutEffect(() => {
-    requestAnimationFrame(adjustSectionBreakSpacing);
+    scheduleReflow();
   }, [store]);
 
   if (!state) return null;
 
   const { sections = [], pageBreaks = [] } = state;
+  const manualBreakIds = new Set(pageBreaks.filter(b => b.before).map(b => b.before));
   const pageGroups = splitIntoPages(sections, pageBreaks);
 
   let offset = 0;
@@ -47,6 +52,7 @@ export function Pages() {
         const isFirst = pageIdx === 0;
         const isLast = pageIdx === pageGroups.length - 1;
         const nextFirstId = !isLast ? pageGroups[pageIdx + 1]?.[0]?.id : null;
+        const nextBreakIsManual = nextFirstId && manualBreakIds.has(nextFirstId);
 
         return (
           <div class="paper" id={isFirst ? 'paper' : undefined} key={`page-${pageIdx}`}>
@@ -71,9 +77,10 @@ export function Pages() {
             )}
             {!isLast && nextFirstId && (
               <div class="page-break-ctrl">
-                <button class="page-break-rm" onClick={() => removeBreak(nextFirstId)}>
-                  ✕ remove page break
-                </button>
+                {nextBreakIsManual
+                  ? <button class="page-break-rm" onClick={() => removeBreak(nextFirstId)}>✕ remove page break</button>
+                  : <span class="page-break-auto-label">auto page break</span>
+                }
               </div>
             )}
           </div>
