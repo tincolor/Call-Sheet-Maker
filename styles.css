@@ -107,8 +107,6 @@
     overflow-x: hidden;
     padding: 14px;
     font-size: 12px;
-    display: flex;
-    flex-direction: column;
   }
   .isb-footer {
     flex-shrink: 0;
