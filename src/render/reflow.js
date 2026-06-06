@@ -98,18 +98,19 @@ export function autoReflowSections() {
     const h = _printHeight(el) + sectionMarginPx;
     const isSchedule = el.classList.contains('section--schedule');
 
-    if (isSchedule) {
+    if (isSchedule && h > pageNAvail) {
+      // Schedule is longer than a full page — auto-breaking won't help since it won't
+      // fit anywhere. Leave it in place and show the overflow indicator so the user
+      // can manually add a row break.
+      scheduleOverflow = { sectionId: id, overflowPx: h - remaining };
       remaining -= h;
-      if (remaining < 0) {
-        scheduleOverflow = { sectionId: id, overflowPx: -remaining };
-      }
+    } else if (i > 0 && remaining < h) {
+      // Section doesn't fit on the current page — auto-break before it.
+      // Applies equally to schedule (when it fits on a fresh page) and all other sections.
+      autoBreaks.push(id);
+      remaining = pageNAvail - h;
     } else {
-      if (i > 0 && remaining < h) {
-        autoBreaks.push(id);
-        remaining = pageNAvail - h;
-      } else {
-        remaining -= h;
-      }
+      remaining -= h;
     }
   });
 
