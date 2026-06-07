@@ -47,8 +47,9 @@ export function HowToUsePanel() {
           <div class="how-to-use-section">
             <h4>About Call Sheet Maker</h4>
             <p>
-              Make call sheets the easy way. Use Claude to make sense of all the info that needs to go into a call sheet. It doesn't matter if it's in a long chat group, spread over multiple emails, or if it's in your head. Feed all that data to Claude and it will automatically put it into the call sheet for you. And if Claude makes a mistake, or if you want to adjust something, you can do that too. Or if you hate AI and want to do it all yourself, you can do that, too!
+              Make call sheets the easy way. Use Claude to make sense of all the info that needs to go into a call sheet. It doesn't matter if it's in a long group chat, spread over multiple emails, or if it's in your head. Feed all that data to Claude and it will automatically put it into the call sheet for you. And if Claude makes a mistake, or if you want to adjust something, you can do that too. Or if you hate AI and want to do it all yourself, you can do that, too!
             </p>
+            <p><strong>Note:</strong> Works best in Chrome.</p>
           </div>
 
           {/* Workflow */}
