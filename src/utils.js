@@ -92,15 +92,21 @@ export function confirmPopover(anchor, message, options = {}) {
     const rect = anchorEl?.getBoundingClientRect?.() || {
       left: window.innerWidth / 2,
       right: window.innerWidth / 2,
+      top: window.innerHeight / 2,
       bottom: window.innerHeight / 2,
     };
     const popRect = pop.getBoundingClientRect();
     const margin = 8;
     const centeredLeft = rect.left + (rect.width || 0) / 2 - popRect.width / 2;
     const left = clamp(centeredLeft + window.scrollX, margin + window.scrollX, window.scrollX + window.innerWidth - popRect.width - margin);
-    const top = rect.bottom + window.scrollY + 8;
+    const fitsBelow = rect.bottom + popRect.height + margin < window.innerHeight;
+    const above = !fitsBelow;
+    const top = above
+      ? rect.top + window.scrollY - popRect.height - 8
+      : rect.bottom + window.scrollY + 8;
     pop.style.left = `${left}px`;
     pop.style.top = `${top}px`;
+    pop.classList.toggle('confirm-popover--above', above);
   };
 
   requestAnimationFrame(place);

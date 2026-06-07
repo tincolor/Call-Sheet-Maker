@@ -2,7 +2,6 @@ import { app, save } from './store.js';
 import { confirmPopover, uid, esc } from './utils.js';
 import { DEFAULT_DAY } from './data.js';
 import { renderSheet } from './render/sheet.js';
-import { setIntakeStep, setIntakeDraft } from './intake.js';
 
 export function csvEscape(s) {
   s = s == null ? '' : String(s);
@@ -72,20 +71,18 @@ export function importCSV(anchor) {
         const drafts = parseCSVtoDrafts(fr.result);
         if (drafts.length === 0) { alert('No content found in CSV.'); return; }
 
-        if (drafts.length === 1) {
-          // Single day — go through the verify/preview flow
-          setIntakeDraft(drafts[0]);
-          setIntakeStep('verify');
-          return;
-        }
+        const dayLabel = drafts.length === 1
+          ? (drafts[0].meta?.date || drafts[0].meta?.day || 'this day')
+          : `${drafts.length} days`;
 
-        // Multi-day — create all days at once, after confirming
-        const action = await confirmPopover(
+        const replace = await confirmPopover(
           anchor,
-          `This CSV contains ${drafts.length} days:\n\n` +
-          drafts.map((d, i) => `  ${i + 1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
-          `\n\nReplace all existing days with these?`,
-          { confirmText: 'Replace all', cancelText: 'Append' }
+          drafts.length === 1
+            ? `Import "${dayLabel}" from CSV?`
+            : `This CSV contains ${drafts.length} days:\n\n` +
+              drafts.map((d, i) => `  ${i + 1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
+              '\n\nHow would you like to import?',
+          { confirmText: 'Replace current day', cancelText: 'Add as new day' }
         );
 
         const fresh = drafts.map(d => ({
@@ -96,12 +93,20 @@ export function importCSV(anchor) {
           sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
         }));
 
-        if (action) {
-          app.store.days = fresh;
+        if (replace) {
+          // Overwrite the current day in-place
+          const cur = app.state;
+          cur.meta = fresh[0].meta;
+          cur.sections = fresh[0].sections;
+          // If multi-day, append the remaining days as new
+          if (fresh.length > 1) {
+            app.store.days.push(...fresh.slice(1));
+          }
         } else {
+          // Add all imported days as new days, switch to the first
           app.store.days.push(...fresh);
+          app.store.currentDayId = fresh[0].id;
         }
-        app.store.currentDayId = fresh[0].id;
         save();
         renderSheet();
       } catch (e) {
