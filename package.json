@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && bun scripts/post-build.mjs",
-    "check": "bun scripts/smoke-test.mjs",
+    "test": "bun test",
+    "check": "bun test",
     "generate": "bun scripts/generate-sample.mjs"
   },
   "devDependencies": {

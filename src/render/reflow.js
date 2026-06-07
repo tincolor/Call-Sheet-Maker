@@ -1,5 +1,6 @@
 import { app } from '../store.js';
 import { autoBreaksSignal, scheduleOverflowSignal } from '../signals.js';
+import { computePageBreaks } from './paginate.js';
 
 // Measures a CSS length in actual browser pixels, correctly handling zoom/DPI.
 let _mmCache = {};
@@ -67,7 +68,17 @@ export function autoReflowSections() {
     headerH += el.getBoundingClientRect().height;
   });
 
-  const page1Avail = contentH - headerH;
+  // Page 1's .sections-body sits below an 8mm gap from the header
+  // (.hd2 ~ .sections-body { margin-top: 8mm } — present on screen AND print).
+  // Measure it from the live DOM so this stays correct if the CSS value changes.
+  let headerGap = 0;
+  const bodyEl = firstPaper.querySelector('.sections-body');
+  const lastHeaderEl = firstPaper.querySelector('.hd2') || firstPaper.querySelector('.hd');
+  if (bodyEl && lastHeaderEl) {
+    headerGap = bodyEl.getBoundingClientRect().top - lastHeaderEl.getBoundingClientRect().bottom;
+  }
+
+  const page1Avail = contentH - headerH - Math.max(0, headerGap);
   const pageNAvail = contentH;
 
   const secEls = Array.from(document.querySelectorAll('.section[data-id]'));
@@ -83,36 +94,16 @@ export function autoReflowSections() {
     (app.state.pageBreaks || []).filter(b => b.before).map(b => b.before)
   );
 
-  const autoBreaks = [];
-  let scheduleOverflow = null;
-  let remaining = page1Avail;
+  // Measure each section into a plain {id, height, isSchedule} record, then
+  // hand the layout decision to the pure computePageBreaks() algorithm.
+  const measured = secEls.map(el => ({
+    id: el.dataset.id,
+    height: _printHeight(el) + sectionMarginPx,
+    isSchedule: el.classList.contains('section--schedule'),
+  }));
 
-  secEls.forEach((el, i) => {
-    const id = el.dataset.id;
-
-    if (manualBreakIds.has(id)) {
-      // Forced new page — reset available space
-      remaining = pageNAvail;
-    }
-
-    const h = _printHeight(el) + sectionMarginPx;
-    const isSchedule = el.classList.contains('section--schedule');
-
-    if (isSchedule && h > pageNAvail) {
-      // Schedule is longer than a full page — auto-breaking won't help since it won't
-      // fit anywhere. Leave it in place and show the overflow indicator so the user
-      // can manually add a row break.
-      scheduleOverflow = { sectionId: id, overflowPx: h - remaining };
-      remaining -= h;
-    } else if (i > 0 && remaining < h) {
-      // Section doesn't fit on the current page — auto-break before it.
-      // Applies equally to schedule (when it fits on a fresh page) and all other sections.
-      autoBreaks.push(id);
-      remaining = pageNAvail - h;
-    } else {
-      remaining -= h;
-    }
-  });
+  const { autoBreaks, scheduleOverflow } =
+    computePageBreaks(measured, manualBreakIds, page1Avail, pageNAvail);
 
   autoBreaksSignal.value = autoBreaks;
   scheduleOverflowSignal.value = scheduleOverflow;
@@ -132,7 +123,7 @@ function _adjustPaper(paper) {
   const mmToPx      = 96 / 25.4;
   const pageH       = (app.store.tweaks.paperSize === 'letter' ? 279.4 : 297) * mmToPx;
   const pageSlot    = pageH + 20;
-  const topMarginPx = 26 * mmToPx;
+  const topMarginPx = 14 * mmToPx; // continuation sits 14mm (paper top padding) below the page-slot boundary
 
   paper.querySelectorAll('.sched-cont-content').forEach(c => c.style.paddingTop = '');
   paper.querySelectorAll('.sched-cont-wrap .brk-bar').forEach(el => {

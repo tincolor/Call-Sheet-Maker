@@ -1,0 +1,93 @@
+# META
+key,value
+company,Razor Sharp Productions
+address,"1200 N Vine St, Ste 200
+Los Angeles, CA 90038"
+project,Thunderbolt EV – Heritage Reborn
+client,Atlas Automotive
+mainLocation,"Downtown Airfield Hangar 4 · Lancaster, CA"
+date,2026.06.15 (MON)
+day,2
+shootCall,05:30
+emergency,"Maya Cruz (1st AD) 661-555-9001
+Ricky Kim (Safety) 661-555-9002"
+weatherCallout,CLEAR · 96° / 72°F · LOW HUMIDITY
+headerNote,"Heat advisory: hydration stations on set.
+No open flame near vehicles."
+sunrise,5:37
+sunset,8:18
+crew.director, Helena Voss
+crew.dop, Omar Benoit
+crew.lp, Jesse Torres
+crew.usprod, Casey Wells
+
+# SCHEDULE · Schedule
+type,time,dur,task,loc,cast,note
+row,05:30,1h30m,LOAD IN & BASE SETUP,Hangar 4,,Verify vehicle positions with stunt coordinator.
+row,07:00,1h,BLOCKING & LIGHTING PASS,Hangar 4,Talent A (driver),Full camera rehearsal without smoke.
+row,08:00,2h,SC 42 — INT. VEHICLE — DAY (EST),Hangar 4 – rig on stage,Talent A; Talent B (passenger),Process trailer plates pre-rigged.
+span,10:00,30m,,,,
+row,10:30,2h30m,SC 44 — EXT. AIRFIELD — SUNSET (SIM),Runway E – south end,Talent A; Talent C (cyclist),"Smoke generators, helicopter flyover TBC. Backup: sc 45 interior."
+span,13:00,1h,,,,
+row,14:00,1h30m,"SC 46 — DETAIL SHOTS (HUB, HEADLIGHT)",Hangar 4 – macro table,,2nd unit prep lighting for hero car.
+row,15:30,1h,COVERAGE – BTS & SOCIAL CLIPS,Hangar 4,All talent,Social media team may request 5 min interviews.
+span,16:30,,,,,
+
+# CONTACTS · Production Crew
+role,name,phone
+Director,Helena Voss,310-555-0210
+DOP,Omar Benoit,323-555-0311
+1st AD,Maya Cruz,661-555-9001
+Line Producer,Jesse Torres,818-555-0422
+US Producer,Casey Wells,212-555-1000
+Gaffer,Elise Park,310-555-0513
+Sound Mixer,Greg Okafor,323-555-0614
+Stunt Coordinator,Dax Romero,661-555-0715
+Key PA,Samira Alonzo,661-555-0816
+
+# CONTACTS · Client & Agency
+role,name,phone
+Brand Director (Atlas),Marcus Wei,marcus.wei@atlasauto.com
+Agency Creative Dir.,Linda Kwon,linda.kwon@creativiate.com
+Account Manager,Ryan Patel,ryan@creativiate.com
+Legal / Clearance,Tanya O'Shea,tanya.oshea@atlaslegal.com
+
+# HOSPITAL · Nearest Hospital
+key,value
+name,Lancaster Community Hospital (ER)
+addr,"43830 N 10th St W, Lancaster, CA 93534"
+phone,661-942-9991
+hours,24h / ER
+dist,~12 mi / 20 min from location
+
+# BASECAMP · Parking / Basecamp
+key,value
+name,Hangar 4 – Airfield North Side
+addr,"4500 W Ave B, Lancaster, CA 93534"
+parking,Open lot south of hangar; all crew park in designated rows A–C. No vehicle access past safety cones.
+restroom,Portable units (4) behind catering tent; flush inside hangar after 08:00
+catering,Box lunch delivery at 12:30 (pickup at tent). Coffee & water stations 24/7. $20 cash breakfast buyout if needed.
+
+# EQUIPMENT · Equipment Checklist
+text,done
+Alexa 35 + EVF (rental),false
+Angenieux 45-250mm zoom (rental),false
+"Prime set: ARRI Ultra Prime 14, 20, 35, 50mm",false
+Cooke S4/i 75mm (own),false
+Ronin 2 gimbal + focus puller rig,false
+Cine Tape + DIT cart,false
+HMI 12K ×2 (rental),false
+Diffusion: 6×6 frame full grid + 4×4 silk,false
+Aputure 600d Pro ×3 (own),false
+Wireless video: Teradek Bolt 5000,false
+Sound: Zaxcom Nova + 4 wireless lavs,false
+Boom: Schoeps CMIT 5 MKII,false
+"Safety: Fire extinguisher (ABC) ×2, ice packs",false
+
+# NOTES · Notes
+key,value
+text,"ALL CREW: no recordings/photos of unreleased vehicle without client approval.
+Stunt driving rehearsals will be radio-announced; stay clear of Runway E during takes.
+Sunblock, hats, and reuseable water bottles provided.
+General call at 05:30 sharp – parking lot gate opens at 05:00.
+NDA reminder on file; any breach may result in removal from set."

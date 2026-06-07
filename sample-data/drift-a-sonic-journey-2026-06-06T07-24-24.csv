@@ -1,0 +1,115 @@
+# META
+key,value
+company,"Neon Frame Productions
+A Division of Mosaic Media Group"
+address,"1600 W Magnolia Blvd, Suite 200
+Burbank, CA 91506"
+project,Drift — A Sonic Journey
+client,Fender Musical Instruments × Spotify
+mainLocation,"Joshua Tree Music Festival Grounds · Twentynine Palms, CA"
+date,2026.06.20 (SAT)
+day,2
+shootCall,05:30
+emergency,"Kai Olsen (Producer) 310-555-7801
+On-site medic: Station 3"
+weatherCallout,"SUNNY · 98° / 72°F
+Heat advisory in effect"
+headerNote,"Hydration stations at Basecamp & Stage B
+No personal vehicles beyond parking lot"
+sunrise,5:34
+sunset,8:02
+crew.director, Amara Singh
+crew.dop, Diego Reyes
+crew.lp, Kai Olsen
+crew.usprod,
+
+# SCHEDULE · Day 2 Schedule
+type,time,dur,task,loc,cast,note
+row,05:30,1h30m,PRE-LIGHT STAGE B + STAGE C,Main Festival Grounds,,Night rigging complete — power check at 06:00
+row,07:00,45m,CAMERA & DRONE SETUP,Stage B,Drone Op (Dave),No-fly zone confirmed with park ranger
+row,07:45,2h15m,"SC 8 — EXT. MAIN STAGE — GOLDEN HOUR
+Talent B performance + crowd interaction",Stage B,Talent B (Mia Lux); Crowd: 30 PA extras,Golden hour window 07:45–08:45. Priority coverage.
+row,10:00,1h30m,SC 11 — EXT. ART INSTALLATION — WALK & TALK,Installation Field (north lot),Talent A (Jax Reid); Talent C (Indra Mo),Restrict crowd to south side of installation
+row,11:30,1h30m,"SC 14 — INT. BACKSTAGE TENT — DAY
+Interview-style 2-shot",Backstage VIP Tent,Talent A; Talent B,Soundstage quiet — kill all AC units 5 min prior
+span,13:00,1h,,,,
+row,14:00,2h,"SC 16 — EXT. DESERT STAGE — SUNSET
+Full band performance (4-song playback)",Desert Stage (west field),Full band: Mia Lux (vocals); Jax Reid (guitar); Indra Mo (drums); Leo Hart (bass),Sunset window 19:12–19:40. Playback track 4 songs; camera phantom power check 1h prior
+row,16:00,30m,B-ROLL: AERIALS OF FESTIVAL CROWDS,Overhead — desert stage area,,Drone flight window. Max altitude 400ft. Spotter required.
+row,16:30,1h15m,"SC 21 — EXT. CAMPFIRE — MAGIC HOUR
+Talent A solo reflection",Camp Circle V3 (east trail),Talent A,Smoke machine & fire effects approved; fire marshal on standby
+row,17:45,45m,WRAP-ON-TIME: C-STAND & LED WRAP,All locations,Full crew,Secure all rental gear before sunset; dust covers on all lenses
+span,18:30,,,,,
+
+# CONTACTS · Core Crew
+role,name,phone
+Director,Amara Singh,323-555-2400
+DOP,Diego Reyes,310-555-2401
+Line Producer,Kai Olsen,310-555-7801
+1st AD,Tara Nguyen,818-555-3004
+2nd AC (A-Cam),Yuki Tanaka,323-555-3012
+Sound Mixer,Omar Hassan,310-555-3015
+Gaffer,Lena Voss,805-555-4022
+Key Grip,Marcus Bell,310-555-4023
+Drone Pilot,Dave Choi,702-555-6010
+PA (runner),Sofia Ruiz,760-555-2033
+
+# CONTACTS · Talent & Band
+role,name,phone
+Talent A — Jax Reid (guitarist),Jax Reid,jax.reid@example.com
+Talent B — Mia Lux (vocalist),Mia Lux,mialux@example.com
+Talent C — Indra Mo (drummer),Indra Mo,indra.mo@example.com
+Talent D — Leo Hart (bassist),Leo Hart,leohart@example.com
+Band Manager,Cynthia Park,213-555-4500
+Talent Wrangler,Elena Cruz,310-555-4501
+
+# CONTACTS · Client — Fender × Spotify
+role,name,phone
+Account Director (Fender),Ryan Nakamura,ryan.n@fender.com
+Creative Producer (Spotify),Sarah Kim,sarah.kim@spotify.com
+On-set Brand Rep,Alex Turner,480-555-9901
+
+# HOSPITAL · Nearest Hospital
+key,value
+name,Hi-Desert Medical Center (Level III Trauma)
+addr,"6601 White Feather Rd, Joshua Tree, CA 92252"
+phone,760-366-6321
+hours,24h / ER
+dist,~8 mi / 15 min from festival grounds
+
+# BASECAMP · Parking / Basecamp
+key,value
+name,Joshua Tree Music Festival — Basecamp HQ
+addr,"Off Highway 62, main entrance at Desert View Rd, Twentynine Palms"
+parking,All crew: Lot B (gravel lot west of Stage A). No on-lot parking after 07:00. Shuttle runs every 15 min.
+restroom,Portable restrooms at main parking; flush toilets at VIP tent (key card access)
+catering,Breakfast 04:30 (coffee + pastries) at HC. Lunch 13:00 south of Stage B. Dinner provided after wrap — menu TBD.
+
+# EQUIPMENT · Camera & Lighting Kit
+text,done
+Sony Venice 6K + Rialto extension,false
+Sony 24-70mm f/2.8 GM II,false
+Sony 85mm f/1.4 GM,false
+Sony 100-400mm f/4.5-5.6 GM (for stage),false
+ZEISS Supreme Prime 35mm T1.5,false
+ZEISS Supreme Prime 50mm T1.5,false
+ARRI Skypanel S60-C ×2 (rental),false
+Aputure 600d Pro + Fresnel (rental),false
+"DJI Mavic 3 Pro Cine (rental, drone)",false
+Sachtler Video 20 tripod + spreader,false
+SmallHD 703 monitor (×2),false
+RED Codex mags 1TB ×3,false
+Sennheiser MKH 416 (boom) + Zaxcom Nova recorder,false
+Sennheiser G4 wireless lav kit ×4,false
+ROCKBAG dust covers for all optics,false
+
+# NOTES · On-Set Notes & Reminders
+key,value
+text,"1. HEAT SAFETY: All crew must drink minimum 1 bottle/hr. Medic in tent behind Stage B. Heat stroke symptoms: call 911.
+2. NDA: All crew, talent, and extras have signed. No backstage photos of gear or setup.
+3. DRONE FLIGHTS: Approved by park service only between 16:00–16:30. No flights over crowds. Spotter = Dave Choi (drone pilot) + PA assigned.
+4. PROP FIRE: Campfire scenes require fire marshal presence. Extinguishers on each camera cart. No open flames near gear.
+5. SOUND: No AC units or generators within 50ft of Stage B during interview takes.
+6. WRAP: Return all rental gear to Basecamp by 20:00. Load-out starts at 18:30 sharp.
+7. CELL SERVICE: Limited at desert stage. Use radio (ch 1-3) for comms. Sat phone in producer's truck.
+8. LOST CHILD / PERSON: Report to Security (Yellow tent at entrance)."

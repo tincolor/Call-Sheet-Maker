@@ -5,6 +5,8 @@
 |------|--------|----------------|-------------------|
 | 2026-06-04 | Agent | logos.inline.js was not inlined by Vite singlefile | Add `type="module"` to the script tag in index.html so Vite can process it as an ES module |
 | 2026-06-04 | User/Agent | logos.inline.js created loading and tree-shaking issues | Move logo base64 declarations directly to `src/logos.js` and delete `logos.inline.js` |
+| 2026-06-07 | Agent | reflow's `page1Avail` did NOT subtract the 8mm `.hd2 ~ .sections-body` margin → over-budgeted page 1 by ~31px (≈1 row). Confirmed in real Chrome: code said 610px, reality was 579px. | Subtract the header→body gap; measure it live from the DOM (`bodyEl.top - lastHeader.bottom`) rather than hardcoding 8mm so it can't drift from CSS. |
+| 2026-06-07 | Agent | Napkin claimed "print paper padding is 12mm all sides". WRONG — `.paper` is `padding: 14mm 12mm 16mm` in BOTH screen and print (print block re-states the same). reflow uses 14mm top / 16mm bottom. | Don't trust the old "12mm all sides" note; the paper padding is 14/12/16 everywhere. |
 
 ## User Preferences
 - Prefers modular ES codebase with HMR (Vite) while retaining portable standalone HTML artifact as distribution output.
@@ -12,7 +14,8 @@
 ## Patterns That Work
 - Splitting monolithic JavaScript files into focused ES modules.
 - Using a centralized `app` state singleton with getters for shorthand state access (`app.state`) to prevent syncing bugs.
-- Mocking minimal DOM globals in Node.js test environments (`smoke-test.mjs`) to test module parsing safely.
+- Tests run under `bun test` (`npm test` / `npm run check`). Suites live in `test/*.test.js` using `bun:test` (`describe`/`test`/`expect`). The old hand-rolled `scripts/smoke-test.mjs` was retired. Pure modules (paginate.js, csv.js) import cleanly under bun with NO DOM mocks because they only touch `document` inside functions, not at module top-level.
+- Make layout logic testable by splitting the pure decision from the DOM measurement: `src/render/paginate.js` (`computePageBreaks`, no DOM) is unit-tested; `reflow.js` only measures sections into `{id,height,isSchedule}` and delegates. Bugs in the *inputs* (e.g. a wrong page1Avail) still need a browser check, not unit tests.
 - Renaming entry points containing JSX syntax to `.jsx` so Rolldown/Vite parses them correctly.
 - Using `useLayoutEffect` to trigger imperative DOM reflow side-effects (`adjustSectionBreakSpacing`) after Preact renders.
 - Using Preact's `<Fragment>` to map items in loops, ensuring DOM tree queries like `previousElementSibling` continue to resolve correct siblings.
