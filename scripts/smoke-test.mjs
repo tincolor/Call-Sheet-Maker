@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { parseCSVtoDrafts } from '../src/csv.js';
+import { paginateDay } from '../src/render/pagination.js';
 
 // Mock minimal browser globals for Node.js import execution compatibility
 globalThis.window = {
@@ -56,5 +57,70 @@ span,12:00,1h,LUNCH,,,
 assert(drafts.length === 1, 'CSV parser should return one day');
 assert(drafts[0].meta.project === 'A, B', 'CSV parser should preserve quoted commas');
 assert(drafts[0].sections[0].data.length === 2, 'CSV parser should import schedule rows');
+
+// Test derived pagination behavior
+const secA = { id: 'a', type: 'contacts', title: 'A', data: [] };
+const secB = { id: 'b', type: 'contacts', title: 'B', data: [] };
+const sched = {
+  id: 'sched',
+  type: 'schedule',
+  title: 'Schedule',
+  data: [
+    { type: 'row', time: '07:00' },
+    { type: 'row', time: '08:00' },
+    { type: 'row', time: '09:00' },
+  ],
+};
+
+const baseMeasurements = {
+  page1Available: 100,
+  pageAvailable: 100,
+  sections: {
+    a: { fullHeight: 70 },
+    b: { fullHeight: 60 },
+    sched: {
+      fullHeight: 150,
+      firstScheduleBase: 20,
+      continuationBase: 15,
+      addControlsHeight: 0,
+      rows: [
+        { idx: 0, height: 35 },
+        { idx: 1, height: 35 },
+        { idx: 2, height: 35 },
+      ],
+    },
+  },
+};
+
+let paged = paginateDay({ pageBreaks: [], sections: [secA, secB] }, baseMeasurements);
+assert(paged.pages.length === 2, 'Non-schedule sections should flow to a new page when they overflow');
+assert(paged.pages[1].breakBefore.mode === 'auto', 'Overflow page break should be derived as auto');
+
+paged = paginateDay({ pageBreaks: [{ before: 'b' }], sections: [secA, secB] }, {
+  ...baseMeasurements,
+  sections: { ...baseMeasurements.sections, a: { fullHeight: 20 }, b: { fullHeight: 20 } },
+});
+assert(paged.pages.length === 2, 'Manual section break should force a new page');
+assert(paged.pages[1].breakBefore.mode === 'manual', 'Manual section break should stay manual');
+
+paged = paginateDay({ pageBreaks: [], sections: [sched] }, baseMeasurements);
+assert(paged.pages.length === 2, 'Schedule rows should split across pages by measured row heights');
+assert(paged.pages[0].items[0].start === 0 && paged.pages[0].items[0].end === 2, 'First schedule page should contain rows that fit');
+assert(paged.pages[1].items[0].continued === true, 'Second schedule page should be a continuation');
+
+paged = paginateDay({
+  pageBreaks: [{ beforeRow: { sectionId: 'sched', idx: 1 } }],
+  sections: [sched],
+}, {
+  ...baseMeasurements,
+  page1Available: 200,
+  pageAvailable: 200,
+});
+assert(paged.pages.length === 2, 'Manual schedule row break should force a continuation page');
+assert(paged.pages[1].breakBefore.mode === 'manual', 'Manual row break should stay manual');
+
+const stateForMutation = { pageBreaks: [], sections: [secA, secB] };
+paginateDay(stateForMutation, baseMeasurements);
+assert(stateForMutation.pageBreaks.length === 0, 'Derived auto pagination must not mutate saved pageBreaks');
 
 console.log('Smoke test passed.');

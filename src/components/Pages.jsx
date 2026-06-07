@@ -1,91 +1,169 @@
 import { Fragment } from 'preact';
-import { useLayoutEffect } from 'preact/hooks';
+import { useLayoutEffect, useState } from 'preact/hooks';
 import { SheetHeader } from './SheetHeader.jsx';
-import { Sections, addSection } from './Sections.jsx';
+import { Sections, Section, PageBreakSlot, addSection } from './Sections.jsx';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
-import { runLayoutReflow } from '../render/reflow.js';
+import { measureDayLayout, paginateDay } from '../render/pagination.js';
 
-function splitIntoPages(sections, pageBreaks) {
-  const breakBefore = new Set(pageBreaks.filter(b => b.before).map(b => b.before));
-  const pages = [[]];
-  for (const sec of sections) {
-    if (breakBefore.has(sec.id)) pages.push([]);
-    pages[pages.length - 1].push(sec);
-  }
-  return pages;
+function fallbackPagination(state) {
+  return {
+    pages: [{
+      items: (state.sections || []).map((section, sectionIndex) => ({
+        type: section.type === 'schedule' ? 'schedule' : 'section',
+        section,
+        sectionIndex,
+        start: 0,
+        end: section.type === 'schedule' ? section.data.length : null,
+        continued: false,
+        isFinal: true,
+      })),
+      breakBefore: null,
+    }],
+  };
+}
+
+function AddSectionPanel() {
+  return (
+    <div class="add-sec">
+      <div class="add-sec-title">Add section</div>
+      <div class="add-sec-buttons">
+        <button onClick={() => addSection('schedule')}>+ Schedule</button>
+        <button onClick={() => addSection('contacts')}>+ Contacts</button>
+        <button onClick={() => addSection('equipment')}>+ Equipment</button>
+        <button onClick={() => addSection('hospital')}>+ Hospital</button>
+        <button onClick={() => addSection('basecamp')}>+ Parking / Basecamp</button>
+        <button onClick={() => addSection('notes')}>+ Notes</button>
+      </div>
+    </div>
+  );
+}
+
+function MeasureLayer({ state }) {
+  return (
+    <div class="pagination-measure" aria-hidden="true">
+      <div class="paper">
+        <div class="measure-header">
+          <SheetHeader />
+        </div>
+        <div class="measure-sections">
+          <Sections
+            sections={state.sections || []}
+            pageBreaks={state.pageBreaks || []}
+            showBreakSlots={false}
+          />
+        </div>
+        <div class="measure-probes">
+          {(state.sections || []).filter(sec => sec.type === 'schedule').map(sec => (
+            <div class="sched-cont-content measure-continuation" data-section-id={sec.id} key={sec.id}>
+              <div class="sched-cont-title">{sec.title}</div>
+              <div class="sched-cont-subtitle">Continued from previous page.</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageBreakControl({ breakBefore, state }) {
+  if (!breakBefore) return null;
+
+  const isManual = breakBefore.mode === 'manual';
+  const removeBreak = () => {
+    if (breakBefore.beforeRow) {
+      state.pageBreaks = state.pageBreaks.filter(b =>
+        !(b.beforeRow
+          && b.beforeRow.sectionId === breakBefore.beforeRow.sectionId
+          && b.beforeRow.idx === breakBefore.beforeRow.idx)
+      );
+    } else if (breakBefore.before) {
+      state.pageBreaks = state.pageBreaks.filter(b => b.before !== breakBefore.before);
+    }
+    save();
+  };
+
+  return (
+    <div class="page-break-ctrl">
+      <div class="pbreak-marker">
+        <span>{isManual ? 'PAGE BREAK' : 'PAGE BREAK (auto)'}</span>
+        {isManual && (
+          <button class="pbreak-rm" onClick={removeBreak}>
+            ✕ remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function pageBreakTarget(item) {
+  if (!item || item.continued) return null;
+  return item.section?.id || null;
+}
+
+function PageItems({ items, pageBreaks }) {
+  return (
+    <div class="sections-body">
+      {items.map((item, idx) => {
+        const nextTarget = pageBreakTarget(items[idx + 1]);
+        const key = item.type === 'schedule'
+          ? `${item.section.id}-${item.start}-${item.end}-${item.continued ? 'cont' : 'first'}`
+          : item.section.id;
+
+        return (
+          <Fragment key={key}>
+            <Section
+              sec={item.section}
+              idx={item.sectionIndex}
+              scheduleStart={item.start || 0}
+              scheduleEnd={item.end}
+              scheduleContinuation={Boolean(item.continued)}
+              scheduleShowAdd={item.type !== 'schedule' || item.isFinal}
+            />
+            {nextTarget && (
+              <PageBreakSlot before={nextTarget} pageBreaks={pageBreaks} />
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
 }
 
 export function Pages() {
   const store = storeSignal.value;
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
+  const [pagination, setPagination] = useState(null);
 
   useLayoutEffect(() => {
-    requestAnimationFrame(runLayoutReflow);
-  }, [store]);
+    if (!state) return undefined;
+    const raf = requestAnimationFrame(() => {
+      const measurements = measureDayLayout(state, store?.tweaks?.paperSize || 'a4');
+      if (measurements) setPagination(paginateDay(state, measurements));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [store, state]);
 
   if (!state) return null;
 
-  const { sections = [], pageBreaks = [] } = state;
-  const pageGroups = splitIntoPages(sections, pageBreaks);
-
-  let offset = 0;
-  const pageOffsets = pageGroups.map(group => {
-    const o = offset;
-    offset += group.length;
-    return o;
-  });
-
-  const removeBreak = (sectionId) => {
-    state.pageBreaks = state.pageBreaks.filter(b => b.before !== sectionId);
-    save();
-  };
+  const pageModel = pagination || fallbackPagination(state);
+  const pages = pageModel.pages.length ? pageModel.pages : fallbackPagination(state).pages;
 
   return (
     <Fragment>
-      {pageGroups.map((pageSections, pageIdx) => {
+      <MeasureLayer state={state} />
+      {pages.map((page, pageIdx) => {
         const isFirst = pageIdx === 0;
-        const isLast = pageIdx === pageGroups.length - 1;
-        const nextFirstId = !isLast ? pageGroups[pageIdx + 1]?.[0]?.id : null;
-        const isAutoBreak = nextFirstId ? pageBreaks.some(b => b.before === nextFirstId && b.auto) : false;
+        const isLast = pageIdx === pages.length - 1;
+        const nextBreak = pages[pageIdx + 1]?.breakBefore || null;
 
         return (
           <div class="paper" id={isFirst ? 'paper' : undefined} key={`page-${pageIdx}`}>
             {isFirst && <SheetHeader />}
-            <Sections
-              sections={pageSections}
-              pageBreaks={pageBreaks}
-              startIdx={pageOffsets[pageIdx]}
-            />
-            {isLast && (
-              <div class="add-sec">
-                <div class="add-sec-title">Add section</div>
-                <div class="add-sec-buttons">
-                  <button onClick={() => addSection('schedule')}>+ Schedule</button>
-                  <button onClick={() => addSection('contacts')}>+ Contacts</button>
-                  <button onClick={() => addSection('equipment')}>+ Equipment</button>
-                  <button onClick={() => addSection('hospital')}>+ Hospital</button>
-                  <button onClick={() => addSection('basecamp')}>+ Parking / Basecamp</button>
-                  <button onClick={() => addSection('notes')}>+ Notes</button>
-                </div>
-              </div>
-            )}
-            {!isLast && nextFirstId && (
-              <div class="page-break-ctrl">
-                {isAutoBreak ? (
-                  <div class="pbreak-marker">
-                    <span>PAGE BREAK (auto)</span>
-                  </div>
-                ) : (
-                  <div class="pbreak-marker">
-                    <span>PAGE BREAK</span>
-                    <button class="pbreak-rm" onClick={() => removeBreak(nextFirstId)}>
-                      ✕ remove
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            <PageItems items={page.items} pageBreaks={state.pageBreaks || []} />
+            {isLast && <AddSectionPanel />}
+            {!isLast && <PageBreakControl breakBefore={nextBreak} state={state} />}
           </div>
         );
       })}

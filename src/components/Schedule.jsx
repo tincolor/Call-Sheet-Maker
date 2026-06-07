@@ -6,23 +6,16 @@ import { confirmDel } from '../utils.js';
 import { recalculateScheduleTimes, togglePageBreakRow } from '../render/schedule.js';
 import { drag } from '../render/drag.js';
 
-export function Schedule({ sec }) {
+export function Schedule({
+  sec,
+  rowStart = 0,
+  rowEnd = null,
+  continuation = false,
+  showAddControls = true,
+}) {
   const store = storeSignal.value;
-
-  const pageBreaks = store?.days?.find(d => d.id === store.currentDayId)?.pageBreaks || [];
-  
-  const brkIdxs = pageBreaks
-    .filter(b => b.beforeRow && b.beforeRow.sectionId === sec.id)
-    .map(b => b.beforeRow.idx)
-    .sort((a, b) => a - b);
-
-  const segs = [];
-  let from = 0;
-  for (const bi of brkIdxs) {
-    segs.push({ rows: sec.data.slice(from, bi), start: from });
-    from = bi;
-  }
-  segs.push({ rows: sec.data.slice(from), start: from });
+  const end = rowEnd == null ? sec.data.length : rowEnd;
+  const rows = sec.data.slice(rowStart, end);
 
   const handleCellChange = (gi, field, val) => {
     sec.data[gi][field] = val;
@@ -65,74 +58,46 @@ export function Schedule({ sec }) {
     save();
   };
 
-  const handleRemoveBreak = (breakRowIdx) => {
-    let day = store.days.find(d => d.id === store.currentDayId) || store.days[0];
-    day.pageBreaks = day.pageBreaks.filter(b =>
-      !(b.beforeRow && b.beforeRow.sectionId === sec.id && b.beforeRow.idx === breakRowIdx)
-    );
-    save();
-  };
-
   return (
     <div>
-      {segs.map((seg, segIdx) => {
-        const isLast = segIdx === segs.length - 1;
-        const breakRowIdx = seg.start;
-
-        return (
-          <div key={segIdx}>
-            {segIdx > 0 && (
-              <div class="sched-cont-wrap">
-                <div class="brk-bar">
-                  <span>Page Break</span>
-                  <button class="brk-remove" onClick={() => handleRemoveBreak(breakRowIdx)}>
-                    Remove
-                  </button>
-                </div>
-                <div class="sched-cont-content">
-                  <div class="sched-cont-title">{sec.title}</div>
-                  <div class="sched-cont-subtitle">Continued from previous page.</div>
-                </div>
-              </div>
-            )}
-            <table class="sched">
-              <thead>
-                <tr>
-                  <th class="time">Time</th>
-                  <th class="task">Task</th>
-                  <th class="loc">Location</th>
-                  <th class="cast">Cast / Extras</th>
-                  <th class="note">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {seg.rows.map((r, li) => {
-                  const gi = seg.start + li;
-                  return (
-                    <ScheduleRow
-                      key={gi}
-                      row={r}
-                      gi={gi}
-                      sec={sec}
-                      handleCellChange={handleCellChange}
-                      handleRowAction={handleRowAction}
-                    />
-                  );
-                })}
-                {!isLast && (
-                  <tr class="sched-page-footer">
-                    <td colspan="5">Continued on next page.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
-      <div class="add-row">
-        <button onClick={handleAddRow}>+ Add row</button>
-        <button onClick={handleAddSpan}>+ Add spanning row (travel / wrap)</button>
-      </div>
+      {continuation && (
+        <div class="sched-cont-content">
+          <div class="sched-cont-title">{sec.title}</div>
+          <div class="sched-cont-subtitle">Continued from previous page.</div>
+        </div>
+      )}
+      <table class="sched">
+        <thead>
+          <tr>
+            <th class="time">Time</th>
+            <th class="task">Task</th>
+            <th class="loc">Location</th>
+            <th class="cast">Cast / Extras</th>
+            <th class="note">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, li) => {
+            const gi = rowStart + li;
+            return (
+              <ScheduleRow
+                key={gi}
+                row={r}
+                gi={gi}
+                sec={sec}
+                handleCellChange={handleCellChange}
+                handleRowAction={handleRowAction}
+              />
+            );
+          })}
+        </tbody>
+      </table>
+      {showAddControls && (
+        <div class="add-row">
+          <button onClick={handleAddRow}>+ Add row</button>
+          <button onClick={handleAddSpan}>+ Add spanning row (travel / wrap)</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -201,6 +166,7 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
       <tr
         ref={trRef}
         class="span"
+        data-row-idx={gi}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
@@ -237,6 +203,7 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
   return (
     <tr
       ref={trRef}
+      data-row-idx={gi}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}

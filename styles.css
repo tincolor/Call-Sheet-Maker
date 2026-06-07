@@ -194,6 +194,7 @@
   .paper {
     width: var(--paper-w);
     min-height: var(--paper-h);
+    height: var(--paper-h);
     background: var(--paper);
     padding: 14mm 12mm 16mm;
     box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06), 0 20px 60px rgba(0,0,0,.04);
@@ -201,6 +202,25 @@
     font-size: var(--fs-cell);
     line-height: 1.4;
     position: relative;
+  }
+  .pagination-measure {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    width: var(--paper-w);
+    visibility: hidden;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .pagination-measure .paper {
+    box-shadow: none;
+    overflow: visible;
+  }
+  .measure-probes {
+    position: absolute;
+    left: 0;
+    top: calc(var(--paper-h) + 40px);
+    width: 100%;
   }
   /* Screen-only page guide: makes the paper look like separate page-sized sheets */
   .paper::after {
@@ -678,7 +698,7 @@
   }
   /* The padded area below the break bar — represents the top-of-page white space */
   .sched-cont-content {
-    padding-top: 14mm; /* matches paper top padding; overridden to 0 in print */
+    padding: 0 0 6px;
   }
   .sched-cont-title {
     font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
@@ -908,8 +928,7 @@
     /* Hide all screen-only elements */
     .paper::after { display: none !important; }
     .sched-cont-wrap .brk-bar { display: none !important; }
-    /* Match the first page's paper top padding on forced continuation pages. */
-    .sched-cont-content { padding-top: 14mm !important; }
+    .sched-cont-content { padding-top: 0 !important; }
     /* Legacy row break — should not appear in new builds but kept for safety */
     table.sched tr.after-break-row { break-before: page; page-break-before: always; }
     table.sched tr.after-break-row > td { padding-top: 14mm !important; }

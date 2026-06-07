@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && bun scripts/post-build.mjs",
-    "check": "bun scripts/smoke-test.mjs"
+    "build": "vite build && node scripts/post-build.mjs",
+    "check": "node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",

@@ -11,7 +11,7 @@ import { Equipment } from './Equipment.jsx';
 import { KV } from './KV.jsx';
 import { Notes } from './Notes.jsx';
 
-export function Sections({ sections = [], pageBreaks = [], startIdx = 0 }) {
+export function Sections({ sections = [], pageBreaks = [], startIdx = 0, showBreakSlots = true }) {
   if (!sections.length) return null;
 
   return (
@@ -19,7 +19,7 @@ export function Sections({ sections = [], pageBreaks = [], startIdx = 0 }) {
       {sections.map((sec, localIdx) => (
         <Fragment key={sec.id}>
           <Section sec={sec} idx={startIdx + localIdx} />
-          {localIdx < sections.length - 1 && (
+          {showBreakSlots && localIdx < sections.length - 1 && (
             <PageBreakSlot before={sections[localIdx + 1].id} pageBreaks={pageBreaks} />
           )}
         </Fragment>
@@ -28,12 +28,12 @@ export function Sections({ sections = [], pageBreaks = [], startIdx = 0 }) {
   );
 }
 
-function PageBreakSlot({ before, pageBreaks = [] }) {
+export function PageBreakSlot({ before, pageBreaks = [] }) {
   const store = storeSignal.value;
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
   if (!state) return null;
 
-  const has = pageBreaks.some(p => p.before === before);
+  const has = pageBreaks.some(p => p.before === before && !p.auto);
 
   const handleAdd = () => {
     state.pageBreaks.push({ before });
@@ -63,7 +63,14 @@ function PageBreakSlot({ before, pageBreaks = [] }) {
   );
 }
 
-function Section({ sec, idx }) {
+export function Section({
+  sec,
+  idx,
+  scheduleStart = 0,
+  scheduleEnd = null,
+  scheduleContinuation = false,
+  scheduleShowAdd = true,
+}) {
   const store = storeSignal.value;
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
   if (!state) return null;
@@ -136,7 +143,6 @@ function Section({ sec, idx }) {
     save();
   };
 
-  const breakMarker = state.pageBreaks.some(p => p.before === sec.id);
   const nth = String(idx + 1).padStart(2, '0');
 
   let hasRowBreaks = false;
@@ -147,32 +153,42 @@ function Section({ sec, idx }) {
   return (
     <div
       ref={trRef}
-      class={`section section--${sec.type} ${breakMarker ? 'after-break' : ''} ${hasRowBreaks ? 'has-row-break' : ''}`}
+      class={`section section--${sec.type} ${hasRowBreaks ? 'has-row-break' : ''}`}
       data-id={sec.id}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div class="section-head">
-        <h3>
-          <span class="num">{nth}</span>
-          <ContentEditable
-            className="title"
-            placeholder="Section title"
-            value={sec.title}
-            onCommit={handleTitleChange}
-          />
-        </h3>
-        <div class="sec-ctrls">
-          <button class="drag-handle sec-drag-handle" title="Drag to reorder section" onMouseDown={handleMouseDown}>⠿</button>
-          <button onClick={() => handleSectionAction('up')} title="Move up">↑</button>
-          <button onClick={() => handleSectionAction('down')} title="Move down">↓</button>
-          <button onClick={() => handleSectionAction('del')} title="Delete section">✕</button>
+      {!scheduleContinuation && (
+        <div class="section-head">
+          <h3>
+            <span class="num">{nth}</span>
+            <ContentEditable
+              className="title"
+              placeholder="Section title"
+              value={sec.title}
+              onCommit={handleTitleChange}
+            />
+          </h3>
+          <div class="sec-ctrls">
+            <button class="drag-handle sec-drag-handle" title="Drag to reorder section" onMouseDown={handleMouseDown}>⠿</button>
+            <button onClick={() => handleSectionAction('up')} title="Move up">↑</button>
+            <button onClick={() => handleSectionAction('down')} title="Move down">↓</button>
+            <button onClick={() => handleSectionAction('del')} title="Delete section">✕</button>
+          </div>
         </div>
-      </div>
+      )}
       <div class="section-body">
-        {sec.type === 'schedule' && <Schedule sec={sec} />}
+        {sec.type === 'schedule' && (
+          <Schedule
+            sec={sec}
+            rowStart={scheduleStart}
+            rowEnd={scheduleEnd}
+            continuation={scheduleContinuation}
+            showAddControls={scheduleShowAdd}
+          />
+        )}
         {sec.type === 'contacts' && <Contacts sec={sec} />}
         {sec.type === 'equipment' && <Equipment sec={sec} />}
         {sec.type === 'hospital' && (
