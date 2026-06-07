@@ -377,7 +377,7 @@ export function IntakeSidebar() {
 
       {step === 'verify' && (
         <div class="isb-footer">
-          <button class="isb-btn isb-btn--primary" onClick={publishIntake}>Publish to Sheet →</button>
+          <button class="isb-btn isb-btn--primary" onClick={(e) => publishIntake(e.currentTarget)}>Publish to Sheet →</button>
           <button class="isb-btn" onClick={resetIntake}>Discard</button>
         </div>
       )}
