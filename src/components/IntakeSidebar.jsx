@@ -134,9 +134,11 @@ function InputStep({ textareaRef, onInterpret }) {
         <button class="isb-btn isb-btn--primary" onClick={onInterpret}>Interpret →</button>
         <span class="isb-hint">{hint}</span>
       </div>
-      <div class="isb-row-actions" style="margin-top:6px">
-        <button class="isb-btn isb-btn--ghost" onClick={loadExample}>Preview with example data</button>
-      </div>
+      {import.meta.env.DEV && (
+        <div class="isb-row-actions" style="margin-top:6px">
+          <button class="isb-btn isb-btn--ghost" onClick={loadExample}>Preview with example data</button>
+        </div>
+      )}
       <ApiKeyPanel />
     </>
   );
