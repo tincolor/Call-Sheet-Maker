@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/post-build.mjs",
-    "check": "node scripts/smoke-test.mjs"
+    "check": "node scripts/smoke-test.mjs",
+    "generate": "bun scripts/generate-sample.mjs"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
