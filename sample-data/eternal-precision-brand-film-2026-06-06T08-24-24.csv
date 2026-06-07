@@ -1,0 +1,93 @@
+# META
+key,value
+company,Summit Productions GmbH
+address,"Pflugstrasse 12
+Berlin, 10115"
+project,Eternal Precision — Brand Film
+client,Vercher Watches
+mainLocation,"Zugspitze Glacier · Garmisch-Partenkirchen, DE"
+date,2026.07.12 (SUN)
+day,3
+shootCall,05:30
+emergency,Claudia Weber (Line Producer) +49 172 456-7890
+weatherCallout,CLEAR · 12° / 5°C
+headerNote,"Altitude ~2,962m. Oxygen & cold gear required.
+No drone flight if wind >20km/h."
+sunrise,5:22
+sunset,21:08
+crew.director, Elias Vogt
+crew.dop, Yuki Tanaka
+crew.lp, Claudia Weber
+crew.usprod,
+
+# SCHEDULE · Schedule — Day 3
+type,time,dur,task,loc,cast,note
+row,05:30,1h30m,CREW CALL & GEAR LOAD (cable car),Eibsee Cable Car Base Station,,First cable car at 05:45. Keep bags under 20kg.
+row,07:00,45m,ARRIVE AT SUMMIT — SET UP,Zugspitze Plateau (facing north),,Wind check; alt. location: indoor panorama restaurant
+row,07:45,2h15m,SC 1A — EXT. GLACIER — MAGIC HOUR,Glacier edge (safety zone marked),Talent V,Only golden hour window. Must wrap by 10:00.
+span,10:00,30m,,,,
+row,10:30,2h,SC 2 — EXT. SUMMIT CROSS — DETAILS,"Near summit cross, south side",Talent V (close-ups),Watch clouds coming in; may shift to afternoon.
+span,12:30,45m,,,,
+row,13:15,2h,SC 3 — INT. GLACIER TUNNEL (visitor tunnel),Zugspitze glacier tunnel — 100m in,Talent V,Temperature ~0°C. Lighting with Aputure 600d + diffusion.
+row,15:15,1h30m,B-ROLL — AERIAL (DJI Inspire 3),Plateau & cable car path,,Pilot: Lukas Beyer. No-fly zone: 400m radius around summit.
+span,16:45,,,,,
+
+# CONTACTS · Core Crew
+role,name,phone
+Director,Elias Vogt,+49 162 111-2233
+DOP,Yuki Tanaka,+49 172 222-3344
+Line Producer,Claudia Weber,+49 172 456-7890
+1st AC (Focus),Hannah Scholz,+49 151 555-6677
+Sound Mixer,Janek Müller,+49 170 888-9900
+Drone Pilot,Lukas Beyer,+49 163 777-8899
+
+# CONTACTS · Client — Vercher Watches
+role,name,phone
+Brand Director,Sophie Laurent,sl@vercher.ch
+Creative Lead,Marcus Jung,+41 79 123 4567
+
+# CONTACTS · Talent
+role,name,phone
+Talent V,Victor Nielsen,+49 176 444-3322
+
+# HOSPITAL · Nearest Hospital
+key,value
+name,Klinikum Garmisch-Partenkirchen
+addr,"Auenstraße 6, 82467 Garmisch-Partenkirchen"
+phone,+49 8821 707-0
+hours,24h / ER
+dist,~12 km / 30 min from base station (incl. cable car)
+
+# BASECAMP · Parking / Basecamp
+key,value
+name,Eibsee Hotel & Base Camp Tent
+addr,"Eibsee 1, 82491 Grainau"
+parking,P2 (paid) at Eibsee cable car station — free for crew with badge
+restroom,Hotel lobby & base camp porta-potty at plateau tent
+catering,Packed lunch provided; hot drinks at summit restaurant (10:00–10:30)
+
+# EQUIPMENT · Equipment Checklist
+text,done
+RED Komodo 6K + base kit,false
+Canon CN-E 15.5–47mm T2.8 L,false
+Canon CN-E 70–200mm T2.8 L,false
+Tripod (Sachtler FSB 12),false
+DJI Inspire 3 + Zenmuse X9-8K,false
+Aputure 600d Pro + V-mount battery plate,false
+4×4′ Chimera softbox + grid,false
+Sennheiser MKH 416 + boom pole,false
+Sound Devices MixPre-10 II,false
+RENTAL · SmallHD Cine 13 monitor,false
+RENTAL · PolarPro variable ND (82mm),false
+"RENTAL · Blackmagic Video Assist 7"" 12G",false
+Oxygen canisters (crew safety — 4 units),false
+Hand warmers & emergency blankets,false
+
+# NOTES · Notes
+key,value
+text,"All crew must sign altitude waiver before cable car departure.
+No personal social media posts from summit until client approves first look.
+Wind above 25km/h: cancel drone and secure all soft goods.
+Glacier edge zone is roped — do not cross. Guide: Franz Hofer (mountain guide on site).
+Cable car schedule: last descent at 17:30 sharp — no exceptions.
+If weather deteriorates, alternate scenes: indoor panorama restaurant (pre-lit)."
