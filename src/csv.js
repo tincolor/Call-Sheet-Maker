@@ -1,5 +1,5 @@
 import { app, save } from './store.js';
-import { uid, esc } from './utils.js';
+import { confirmPopover, uid, esc } from './utils.js';
 import { DEFAULT_DAY } from './data.js';
 import { renderSheet } from './render/sheet.js';
 import { setIntakeStep, setIntakeDraft } from './intake.js';
@@ -30,14 +30,15 @@ export function dayToCSVLines(day) {
   return lines;
 }
 
-export function exportCSV() {
+export async function exportCSV(anchor) {
   // Ask scope: current day only, or all days concatenated
   let scope = 'current';
   if (app.store.days.length > 1) {
-    const choice = confirm(
+    const choice = await confirmPopover(
+      anchor,
       `You have ${app.store.days.length} days.\n\n` +
-      `OK = Export ALL days (one file, split by "# DAY" markers)\n` +
-      `Cancel = Export current day only`
+      `Export all days as one file, split by "# DAY" markers?`,
+      { confirmText: 'All days', cancelText: 'Current day' }
     );
     scope = choice ? 'all' : 'current';
   }
@@ -60,13 +61,13 @@ export function exportCSV() {
   a.click();
 }
 
-export function importCSV() {
+export function importCSV(anchor) {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = '.csv,text/csv';
   inp.onchange = () => {
     const f = inp.files[0]; if (!f) return;
     const fr = new FileReader();
-    fr.onload = () => {
+    fr.onload = async () => {
       try {
         const drafts = parseCSVtoDrafts(fr.result);
         if (drafts.length === 0) { alert('No content found in CSV.'); return; }
@@ -79,11 +80,12 @@ export function importCSV() {
         }
 
         // Multi-day — create all days at once, after confirming
-        const action = confirm(
+        const action = await confirmPopover(
+          anchor,
           `This CSV contains ${drafts.length} days:\n\n` +
           drafts.map((d, i) => `  ${i + 1}. ${d.meta?.date || d.meta?.day || '(untitled)'}`).join('\n') +
-          `\n\nOK   = Replace all existing days with these\n` +
-          `Cancel = Append these as new days (keep existing)`
+          `\n\nReplace all existing days with these?`,
+          { confirmText: 'Replace all', cancelText: 'Append' }
         );
 
         const fresh = drafts.map(d => ({

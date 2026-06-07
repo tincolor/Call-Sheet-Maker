@@ -43,9 +43,9 @@ export function Logos() {
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
   if (!state || !state.logos) return null;
 
-  const handleAction = (act, idx) => {
+  const handleAction = async (act, idx, anchor) => {
     if (act === 'remove') {
-      if (!confirmDel('Remove this logo?')) return;
+      if (!(await confirmDel('Remove this logo?', anchor))) return;
       state.logos.splice(idx, 1);
       save();
     } else if (act === 'upload' || act === 'replace') {
@@ -94,7 +94,7 @@ export function Logos() {
                 </div>
                 <div class="logo-ctrls">
                   <button onClick={() => handleAction('replace', i)} title="Replace image">⟳</button>
-                  <button onClick={() => handleAction('remove', i)} title="Remove">×</button>
+                  <button onClick={(e) => handleAction('remove', i, e.currentTarget)} title="Remove">×</button>
                 </div>
               </>
             ) : (
@@ -111,7 +111,7 @@ export function Logos() {
                   {logo.label}
                 </div>
                 <div class="logo-ctrls">
-                  <button onClick={() => handleAction('remove', i)} title="Remove">×</button>
+                  <button onClick={(e) => handleAction('remove', i, e.currentTarget)} title="Remove">×</button>
                 </div>
               </>
             )}

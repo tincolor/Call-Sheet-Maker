@@ -61,8 +61,84 @@ export function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-export function confirmDel(msg) {
-  return confirm(msg);
+let activeConfirm = null;
+
+function getAnchorEl(anchor) {
+  if (!anchor) return null;
+  if (anchor.currentTarget) return anchor.currentTarget;
+  if (anchor.target) return anchor.target;
+  return anchor;
+}
+
+export function confirmPopover(anchor, message, options = {}) {
+  closeConfirmPopover(false);
+
+  const anchorEl = getAnchorEl(anchor);
+  const pop = document.createElement('div');
+  pop.className = 'confirm-popover';
+  pop.innerHTML = `
+    <div class="confirm-popover-msg"></div>
+    <div class="confirm-popover-actions">
+      <button type="button" class="confirm-popover-cancel"></button>
+      <button type="button" class="confirm-popover-ok"></button>
+    </div>
+  `;
+  pop.querySelector('.confirm-popover-msg').textContent = message;
+  pop.querySelector('.confirm-popover-cancel').textContent = options.cancelText || 'Cancel';
+  pop.querySelector('.confirm-popover-ok').textContent = options.confirmText || 'Confirm';
+  document.body.appendChild(pop);
+
+  const place = () => {
+    const rect = anchorEl?.getBoundingClientRect?.() || {
+      left: window.innerWidth / 2,
+      right: window.innerWidth / 2,
+      bottom: window.innerHeight / 2,
+    };
+    const popRect = pop.getBoundingClientRect();
+    const margin = 8;
+    const centeredLeft = rect.left + (rect.width || 0) / 2 - popRect.width / 2;
+    const left = clamp(centeredLeft + window.scrollX, margin + window.scrollX, window.scrollX + window.innerWidth - popRect.width - margin);
+    const top = rect.bottom + window.scrollY + 8;
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  };
+
+  requestAnimationFrame(place);
+
+  return new Promise(resolve => {
+    const cleanup = (result) => {
+      if (activeConfirm !== cleanup) return;
+      document.removeEventListener('pointerdown', onDocPointer, true);
+      document.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('resize', place);
+      pop.remove();
+      activeConfirm = null;
+      resolve(result);
+    };
+
+    const onDocPointer = (e) => {
+      if (pop.contains(e.target) || anchorEl?.contains?.(e.target)) return;
+      cleanup(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') cleanup(false);
+    };
+
+    activeConfirm = cleanup;
+    pop.querySelector('.confirm-popover-cancel').addEventListener('click', () => cleanup(false));
+    pop.querySelector('.confirm-popover-ok').addEventListener('click', () => cleanup(true));
+    document.addEventListener('pointerdown', onDocPointer, true);
+    document.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('resize', place);
+  });
+}
+
+export function closeConfirmPopover(result = false) {
+  if (activeConfirm) activeConfirm(result);
+}
+
+export function confirmDel(msg, anchor) {
+  return confirmPopover(anchor, msg, { confirmText: 'Delete' });
 }
 
 export function parseTimeValue(value) {

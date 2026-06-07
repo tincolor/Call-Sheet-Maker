@@ -3,6 +3,7 @@ import { ContentEditable } from './ContentEditable.jsx';
 import { Logos } from './Header.jsx';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
+import { confirmDel, uid } from '../utils.js';
 
 export function SheetHeader() {
   const store = storeSignal.value;
@@ -22,12 +23,7 @@ export function SheetHeader() {
           <ContentEditable value={m('company')} onCommit={set('company')} multiline className="name" placeholder="Company" tagName="div" />
           <ContentEditable value={m('address')} onCommit={set('address')} multiline className="addr" placeholder="Address" tagName="div" />
           <div style={{ flex: 1 }} />
-          <div class="hd-crew" id="headerCrew">
-            <div><span class="role">Producer :</span><ContentEditable value={m('crew.lp')} onCommit={set('crew.lp')} placeholder="Name" /></div>
-            <div><span class="role">US Producer :</span><ContentEditable value={m('crew.usprod')} onCommit={set('crew.usprod')} placeholder="Name" /></div>
-            <div><span class="role">Director :</span><ContentEditable value={m('crew.director')} onCommit={set('crew.director')} placeholder="Name" /></div>
-            <div><span class="role">DOP :</span><ContentEditable value={m('crew.dop')} onCommit={set('crew.dop')} placeholder="Name" /></div>
-          </div>
+          <HeaderCrewRoles state={state} />
         </div>
 
         <div class="hd-meta-col">
@@ -78,5 +74,66 @@ export function SheetHeader() {
         </div>
       </div>
     </Fragment>
+  );
+}
+
+function HeaderCrewRoles({ state }) {
+  if (!state.meta.crewRoles) state.meta.crewRoles = [];
+
+  const focusRole = (id) => {
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-crew-role-id="${id}"] .crew-role-field`)?.focus();
+    });
+  };
+
+  const addRole = (afterIdx = state.meta.crewRoles.length - 1) => {
+    const role = { id: uid(), role: 'Role', names: 'Name' };
+    state.meta.crewRoles.splice(afterIdx + 1, 0, role);
+    save();
+    focusRole(role.id);
+  };
+
+  const removeRole = async (idx, anchor) => {
+    if (!(await confirmDel('Delete this role?', anchor))) return;
+    state.meta.crewRoles.splice(idx, 1);
+    save();
+  };
+
+  const updateRole = (idx, key, val) => {
+    state.meta.crewRoles[idx][key] = val;
+    save();
+  };
+
+  const handleRoleKeyDown = (idx) => (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    addRole(idx);
+  };
+
+  return (
+    <div class="hd-crew" id="headerCrew">
+      {state.meta.crewRoles.map((item, idx) => (
+        <div class="crew-role-row" data-crew-role-id={item.id} key={item.id}>
+          <button class="crew-role-del" title="Delete role" onClick={(e) => removeRole(idx, e.currentTarget)}>×</button>
+          <ContentEditable
+            value={item.role}
+            onCommit={(val) => updateRole(idx, 'role', val)}
+            onKeyDown={handleRoleKeyDown(idx)}
+            className="role crew-role-field"
+            placeholder="Role"
+          />
+          <span class="role-colon">:</span>
+          <ContentEditable
+            value={item.names}
+            onCommit={(val) => updateRole(idx, 'names', val)}
+            multiline
+            className="crew-name-field"
+            placeholder="Name"
+            tagName="span"
+          />
+        </div>
+      ))}
+      <button class="crew-role-add" title="Add role" onClick={() => addRole()}>+ Add role</button>
+    </div>
   );
 }

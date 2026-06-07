@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import { app, save } from './store.js';
-import { uid, clamp } from './utils.js';
+import { confirmPopover, uid, clamp } from './utils.js';
 import { INTAKE_WIDTH_KEY } from './constants.js';
 import { renderSheet } from './render/sheet.js';
 
@@ -149,11 +149,15 @@ export function resetIntake() {
   intakeStepSignal.value = 'input';
 }
 
-export function publishIntake() {
+export async function publishIntake(anchor) {
   if (!intakeDraft) return;
   Object.assign(app.state.meta, intakeDraft.meta || {});
   if (Array.isArray(intakeDraft.sections) && intakeDraft.sections.length) {
-    const action = confirm('OK = Replace existing sections with interpreted ones.\nCancel = Append to existing sections.');
+    const action = await confirmPopover(
+      anchor,
+      'Replace existing sections with interpreted ones?',
+      { confirmText: 'Replace', cancelText: 'Append' }
+    );
     const fresh = intakeDraft.sections.map(s => ({ ...s, id: uid() }));
     if (action) app.state.sections = fresh;
     else app.state.sections.push(...fresh);

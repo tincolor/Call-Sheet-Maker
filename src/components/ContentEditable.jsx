@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect } from 'preact/hooks';
 import { htmlToText, textToHTML } from '../utils.js';
 
-export function ContentEditable({ value, onCommit, multiline, className, placeholder, tagName }) {
+export function ContentEditable({ value, onCommit, multiline, className, placeholder, tagName, onKeyDown }) {
   const ref = useRef(null);
   const focused = useRef(false);
 
@@ -22,6 +22,9 @@ export function ContentEditable({ value, onCommit, multiline, className, placeho
   }, [value, multiline]);
 
   const handleKeydown = (e) => {
+    if (onKeyDown) onKeyDown(e);
+    if (e.defaultPrevented) return;
+
     if (multiline && e.key === 'Enter') {
       e.preventDefault();
       const sel = window.getSelection();

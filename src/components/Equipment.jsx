@@ -17,7 +17,7 @@ export function Equipment({ sec }) {
     save();
   };
 
-  const handleAction = (act, idx) => {
+  const handleAction = async (act, idx, anchor) => {
     if (act === 'up' && idx > 0) {
       const [r] = sec.data.splice(idx, 1);
       sec.data.splice(idx - 1, 0, r);
@@ -25,7 +25,7 @@ export function Equipment({ sec }) {
       const [r] = sec.data.splice(idx, 1);
       sec.data.splice(idx + 1, 0, r);
     } else if (act === 'del') {
-      if (!confirmDel('Delete item?')) return;
+      if (!(await confirmDel('Delete item?', anchor))) return;
       sec.data.splice(idx, 1);
     }
     save();
@@ -51,7 +51,7 @@ export function Equipment({ sec }) {
             <span class="row-ctrls">
               <button type="button" onClick={() => handleAction('up', i)} title="Move up">↑</button>
               <button type="button" onClick={() => handleAction('down', i)} title="Move down">↓</button>
-              <button type="button" class="rm" onClick={() => handleAction('del', i)} title="Delete">×</button>
+              <button type="button" class="rm" onClick={(e) => handleAction('del', i, e.currentTarget)} title="Delete">×</button>
             </span>
           </div>
         ))}
