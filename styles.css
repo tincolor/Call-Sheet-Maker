@@ -181,6 +181,61 @@
   }
   .day-btn.day-add:hover { color: var(--accent); }
 
+  /* ──────────────── confirmation popovers ──────────────── */
+  .confirm-popover {
+    position: absolute;
+    z-index: 2000;
+    width: min(260px, calc(100vw - 16px));
+    padding: 10px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 8px 24px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.08);
+    border-radius: 6px;
+    color: var(--ink);
+    font: 12px/1.4 var(--font-ui);
+  }
+  .confirm-popover::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: var(--paper);
+    border-left: 1px solid var(--rule);
+    border-top: 1px solid var(--rule);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .confirm-popover-msg {
+    white-space: pre-wrap;
+    color: var(--ink-2);
+  }
+  .confirm-popover-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .confirm-popover-actions button {
+    font: inherit;
+    font-size: 11px;
+    padding: 5px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .confirm-popover-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .confirm-popover-ok {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+  }
+
   /* ──────────────── paper ──────────────── */
   :root {
     --paper-w: 210mm;
@@ -341,7 +396,60 @@
   .hd-company .addr { text-align: center; color: var(--ink-2); font-size: 11px; line-height: 1.45; }
 
   .hd-crew { font-size: 11px; line-height: 1.55; color: var(--ink-2); }
-  .hd-crew .role { font-weight: 600; color: var(--ink); display: inline-block; min-width: 95px; }
+  .crew-role-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(72px, auto) auto 1fr;
+    column-gap: 2px;
+    align-items: start;
+  }
+  .hd-crew .role {
+    font-weight: 600;
+    color: var(--ink);
+    min-width: 72px;
+  }
+  .role-colon {
+    font-weight: 600;
+    color: var(--ink);
+    padding-right: 4px;
+  }
+  .crew-name-field {
+    min-width: 90px;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .crew-role-del {
+    display: none;
+    position: absolute;
+    left: calc(-12mm - 24px);
+    top: 1px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-3);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+  }
+  body.editing .crew-role-del { display: inline-flex; align-items: center; justify-content: center; }
+  .crew-role-del:hover { color: #fff; background: #D9534F; border-color: #D9534F; }
+  .crew-role-add {
+    display: none;
+    margin-top: 4px;
+    padding: 2px 0;
+    border: none;
+    background: transparent;
+    color: var(--ink-4);
+    cursor: pointer;
+    font: inherit;
+    font-size: 10px;
+    text-align: left;
+  }
+  body.editing .crew-role-add { display: inline-block; }
+  .crew-role-add:hover { color: var(--accent); }
 
   .hd-title {
     background: var(--paper); display: grid; grid-template-rows: auto auto auto 1fr; padding: 0 !important;
@@ -538,12 +646,33 @@
   /* CREW / CONTACTS — flex rows with absolute controls outside paper */
   .crew-grid { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
   .crew-row {
-    display: flex; align-items: baseline; gap: 8px;
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) max-content;
+    align-items: baseline;
+    column-gap: 10px;
+    row-gap: 2px;
     position: relative;
   }
-  .crew-row .role { min-width: 90px; flex-shrink: 0; font-weight: 600; color: var(--ink-2); }
-  .crew-row .name { flex: 1; color: var(--ink); }
-  .crew-row .phone { font-family: var(--font-mono); color: var(--ink-2); white-space: nowrap; }
+  .crew-row .role {
+    min-width: 0;
+    font-weight: 600;
+    color: var(--ink-2);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .crew-row .name {
+    min-width: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .crew-row .phone {
+    min-width: 0;
+    font-family: var(--font-mono);
+    color: var(--ink-2);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .crew-row .crew-ctrls {
     position: absolute; left: calc(100% + 14mm); top: 50%; transform: translateY(-50%);
     display: none; flex-direction: row; gap: 3px;
@@ -589,14 +718,15 @@
 
   /* KV block (hospital / basecamp) */
   .kv-grid {
-    display: grid; grid-template-columns: 80px 1fr;
+    display: grid; grid-template-columns: 132px minmax(0, 1fr);
     row-gap: 3px; column-gap: 10px; font-size: 11px;
   }
   .kv-grid .k {
     font-size: var(--fs-label); font-weight: 600; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--ink-3); padding-top: 1px;
+    min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: normal;
   }
-  .kv-grid .v { color: var(--ink); }
+  .kv-grid .v { color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 
   /* EQUIPMENT */
   .equip-list {
@@ -907,7 +1037,7 @@
   @page { size: A4; margin: 0; }
   @media print {
     html, body { background: #fff; }
-    .appbar, .tweaks, .row-controls, .add-row, .sec-ctrls, .logo-ctrls, .logo-add, .add-sec, .pbreak-slot, .row-del,
+    .appbar, .tweaks, .confirm-popover, .row-controls, .add-row, .sec-ctrls, .logo-ctrls, .logo-add, .crew-role-del, .crew-role-add, .add-sec, .pbreak-slot, .row-del,
     .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer, .page-break-ctrl, .how-to-use-backdrop, .how-to-use-drawer { display: none !important; }
     /* Hide sidebar, show only call sheet */
     .workspace { display: block !important; height: auto !important; overflow: visible !important; }

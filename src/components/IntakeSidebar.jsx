@@ -211,7 +211,7 @@ export function IntakeSidebar() {
         <div style={{ display: step === 'verify' ? '' : 'none' }}>
           <div ref={previewRef}></div>
           <div class="actions">
-            <button class="primary" onClick={publishIntake}>Publish to Sheet →</button>
+            <button class="primary" onClick={(e) => publishIntake(e.currentTarget)}>Publish to Sheet →</button>
             <button onClick={resetIntake}>Cancel</button>
             <span class="hint">Yellow = differs from current sheet</span>
           </div>

@@ -6,6 +6,7 @@ import { renderSheet } from '../render/sheet.js';
 import { deleteDay } from '../days.js';
 import { exportCSV, importCSV } from '../csv.js';
 import { DaySwitcher } from './DaySwitcher.jsx';
+import { confirmPopover } from '../utils.js';
 
 export function AppBar() {
   const store = storeSignal.value;
@@ -14,8 +15,8 @@ export function AppBar() {
 
   const isLetter = store.tweaks?.paperSize === 'letter';
 
-  const handleReset = () => {
-    if (!confirm('Wipe ALL days and start fresh? (Cannot undo.)')) return;
+  const handleReset = async (anchor) => {
+    if (!(await confirmPopover(anchor, 'Wipe ALL days and start fresh? This cannot be undone.', { confirmText: 'Reset all' }))) return;
     localStorage.removeItem(CS_KEY);
     app.store = DEFAULT_STORE();
     save(); renderSheet();
@@ -37,11 +38,11 @@ export function AppBar() {
         <DaySwitcher />
       </div>
       <div class="spacer"></div>
-      <button title="Delete current day" onClick={deleteDay}>Delete Day</button>
-      <button title="Import CSV into current day" onClick={importCSV}>Import CSV</button>
-      <button title="Export current day as CSV" onClick={exportCSV}>Export CSV</button>
+      <button title="Delete current day" onClick={(e) => deleteDay(e.currentTarget)}>Delete Day</button>
+      <button title="Import CSV into current day" onClick={(e) => importCSV(e.currentTarget)}>Import CSV</button>
+      <button title="Export current day as CSV" onClick={(e) => exportCSV(e.currentTarget)}>Export CSV</button>
       <button title="Tweaks" onClick={() => document.body.classList.toggle('tweaks-open')}>Tweaks</button>
-      <button title="Wipe all days" onClick={handleReset}>Reset All</button>
+      <button title="Wipe all days" onClick={(e) => handleReset(e.currentTarget)}>Reset All</button>
       <button title="How to use this app" onClick={() => document.body.classList.toggle('how-to-use-open')}>How To Use</button>
       <button class="primary" title="Print or save as PDF (Cmd/Ctrl+P)" onClick={() => window.print()}>Print / PDF</button>
     </div>

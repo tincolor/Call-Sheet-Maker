@@ -20,6 +20,7 @@ export const app = {
 export function normalizeMultilineFields(day) {
   if (!day?.meta) return;
   if (!('headerNote' in day.meta)) day.meta.headerNote = '';
+  normalizeCrewRoles(day);
   for (const key of MULTILINE_META_KEYS) {
     if (key in day.meta) day.meta[key] = htmlToText(day.meta[key]);
   }
@@ -30,10 +31,35 @@ export function normalizeMultilineFields(day) {
   });
 }
 
+export function normalizeCrewRoles(day) {
+  if (!day?.meta) return;
+  const legacyRoles = [
+    ['Producer', day.meta['crew.lp']],
+    ['US Producer', day.meta['crew.usprod']],
+    ['Director', day.meta['crew.director']],
+    ['DOP', day.meta['crew.dop']],
+  ];
+
+  if (!Array.isArray(day.meta.crewRoles)) {
+    day.meta.crewRoles = legacyRoles.map(([role, names]) => ({
+      id: uid(),
+      role,
+      names: htmlToText(names || ''),
+    }));
+    return;
+  }
+
+  day.meta.crewRoles = day.meta.crewRoles.map(item => ({
+    id: item.id || uid(),
+    role: htmlToText(item.role || ''),
+    names: htmlToText(item.names || ''),
+  }));
+}
+
 export function fixupLogos(day) {
   if (day.logos) {
-    if (day.logos[0] && !day.logos[0].dataUrl) day.logos[0].dataUrl = logoBbc;
-    if (day.logos[1] && !day.logos[1].dataUrl) day.logos[1].dataUrl = logoSa;
+    if (day.logos[0]?.label === 'BBC StoryWorks' && !day.logos[0].dataUrl) day.logos[0].dataUrl = logoBbc;
+    if (day.logos[1]?.label === 'Street Attack' && !day.logos[1].dataUrl) day.logos[1].dataUrl = logoSa;
   }
   if (!day.pageBreaks) day.pageBreaks = [];
   normalizeMultilineFields(day);

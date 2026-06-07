@@ -126,7 +126,7 @@ export function Section({
     save();
   };
 
-  const handleSectionAction = (act) => {
+  const handleSectionAction = async (act, anchor) => {
     const i = state.sections.findIndex(s => s.id === sec.id);
     if (i < 0) return;
     if (act === 'up' && i > 0) {
@@ -136,7 +136,7 @@ export function Section({
       const [s] = state.sections.splice(i, 1);
       state.sections.splice(i + 1, 0, s);
     } else if (act === 'del') {
-      if (!confirmDel('Delete this section?')) return;
+      if (!(await confirmDel('Delete this section?', anchor))) return;
       state.sections.splice(i, 1);
       state.pageBreaks = state.pageBreaks.filter(p => p.before !== sec.id);
     }
@@ -175,7 +175,7 @@ export function Section({
             <button class="drag-handle sec-drag-handle" title="Drag to reorder section" onMouseDown={handleMouseDown}>⠿</button>
             <button onClick={() => handleSectionAction('up')} title="Move up">↑</button>
             <button onClick={() => handleSectionAction('down')} title="Move down">↓</button>
-            <button onClick={() => handleSectionAction('del')} title="Delete section">✕</button>
+            <button onClick={(e) => handleSectionAction('del', e.currentTarget)} title="Delete section">✕</button>
           </div>
         </div>
       )}

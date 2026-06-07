@@ -25,7 +25,7 @@ export function Schedule({
     save();
   };
 
-  const handleRowAction = (act, gi) => {
+  const handleRowAction = async (act, gi, anchor) => {
     if (act === 'up' && gi > 0) {
       const [r] = sec.data.splice(gi, 1);
       sec.data.splice(gi - 1, 0, r);
@@ -35,7 +35,7 @@ export function Schedule({
       sec.data.splice(gi + 1, 0, r);
       recalculateScheduleTimes(sec, gi);
     } else if (act === 'del') {
-      if (!confirmDel('Delete row?')) return;
+      if (!(await confirmDel('Delete row?', anchor))) return;
       sec.data.splice(gi, 1);
       let day = store.days.find(d => d.id === store.currentDayId) || store.days[0];
       day.pageBreaks = day.pageBreaks.filter(p => !(p.beforeRow && p.beforeRow.sectionId === sec.id && p.beforeRow.idx === gi));
@@ -157,7 +157,7 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
       <button onClick={() => handleRowAction('up', gi)}>↑</button>
       <button onClick={() => handleRowAction('down', gi)}>↓</button>
       <button onClick={() => handleRowAction('brk', gi)} title="Page break before">⤓</button>
-      <button onClick={() => handleRowAction('del', gi)}>×</button>
+      <button onClick={(e) => handleRowAction('del', gi, e.currentTarget)}>×</button>
     </div>
   );
 

@@ -12,7 +12,7 @@ export function Contacts({ sec }) {
     save();
   };
 
-  const handleAction = (act, idx) => {
+  const handleAction = async (act, idx, anchor) => {
     if (act === 'up' && idx > 0) {
       const [r] = sec.data.splice(idx, 1);
       sec.data.splice(idx - 1, 0, r);
@@ -20,7 +20,7 @@ export function Contacts({ sec }) {
       const [r] = sec.data.splice(idx, 1);
       sec.data.splice(idx + 1, 0, r);
     } else if (act === 'del') {
-      if (!confirmDel('Delete contact?')) return;
+      if (!(await confirmDel('Delete contact?', anchor))) return;
       sec.data.splice(idx, 1);
     }
     save();
@@ -40,7 +40,7 @@ export function Contacts({ sec }) {
               <span class="crew-ctrls">
                 <button type="button" onClick={() => handleAction('up', i)} title="Move up">↑</button>
                 <button type="button" onClick={() => handleAction('down', i)} title="Move down">↓</button>
-                <button type="button" class="rm" onClick={() => handleAction('del', i)} title="Delete">×</button>
+                <button type="button" class="rm" onClick={(e) => handleAction('del', i, e.currentTarget)} title="Delete">×</button>
               </span>
               <ContentEditable
                 className="role"
