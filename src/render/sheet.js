@@ -16,7 +16,7 @@ const ACCENT_COLOURS = {
 };
 
 // Colors where text on solid accent backgrounds should be black for contrast
-const DARK_TEXT_ACCENTS = new Set(['green', 'pink']);
+const DARK_TEXT_ACCENTS = new Set(['green']);
 
 export function applyTweaks() {
   document.body.classList.add('hide-jp'); // JP labels always hidden

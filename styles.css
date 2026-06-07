@@ -44,6 +44,39 @@
     --chrome-panel: #262626;
   }
 
+  /* How To Use drawer in dark mode */
+  body.dark-mode .how-to-use-drawer {
+    background: #262626;
+    border-color: #4A4A48;
+  }
+  body.dark-mode .how-to-use-drawer-hd {
+    background: #1F1F1E;
+    border-color: #4A4A48;
+  }
+  body.dark-mode .how-to-use-drawer-hd h3 { color: #E8E8E6; }
+  body.dark-mode .how-to-use-drawer-hd .close-btn { color: #A8A8A4; }
+  body.dark-mode .how-to-use-drawer-hd .close-btn:hover { background: #3A3A38; color: #E8E8E6; }
+  body.dark-mode .how-to-use-section h4 { border-color: #4A4A48; }
+  body.dark-mode .how-to-use-section p { color: #A8A8A4; }
+  body.dark-mode .how-to-use-section p strong { color: #E8E8E6; }
+  body.dark-mode .how-to-use-workflow-card {
+    background: #1F1F1E;
+    border-color: #4A4A48;
+  }
+  body.dark-mode .how-to-use-workflow-card h5 { color: #E8E8E6; }
+  body.dark-mode .how-to-use-workflow-card p { color: #A8A8A4; }
+  body.dark-mode .how-to-use-key-steps { color: #A8A8A4; }
+  body.dark-mode .how-to-use-key-steps li strong { color: #E8E8E6; }
+  body.dark-mode .how-to-use-download-btn {
+    background: #3A3A38; color: #E8E8E6; border-color: #4A4A48;
+  }
+  body.dark-mode .how-to-use-download-btn:hover {
+    background: var(--accent); color: var(--accent-text); border-color: var(--accent);
+  }
+  body.dark-mode .how-to-use-function-item { border-color: #3A3A38; }
+  body.dark-mode .how-to-use-function-name { background: #1F1F1E; border-color: #4A4A48; color: #E8E8E6; }
+  body.dark-mode .how-to-use-function-desc { color: #A8A8A4; }
+
   /* Intake panel in dark mode */
   body.dark-mode .isb-lede { color: #A8A8A4; }
   body.dark-mode .isb-btn--primary { background: transparent; color: var(--accent); border-color: var(--accent); }
@@ -76,9 +109,9 @@
   }
   body.dark-mode tr:hover .row-controls,
   body.dark-mode .crew-row:hover .crew-ctrls,
-  body.dark-mode .section-head:hover .sec-ctrls { transform: translateY(-50%) scale(1.2) !important; }
-  body.dark-mode .crew-role-row:hover .crew-ctrls { transform: scale(1.2) !important; }
   body.dark-mode .chk:hover .row-ctrls { transform: translateY(-50%) scale(1.2) !important; }
+  body.dark-mode .section-head:hover .sec-ctrls { transform: scale(1.2) !important; }
+  body.dark-mode .crew-role-row:hover .crew-ctrls { transform: scale(1.2) !important; }
 
   /* Pills use accent colour as background in dark mode */
   body.dark-mode .row-controls,
@@ -105,6 +138,38 @@
     background: color-mix(in oklch, var(--accent) 80%, #000);
     color: var(--accent-text);
   }
+
+  /* Pills use accent color as background in light mode too */
+  .row-controls,
+  .crew-ctrls,
+  .crew-role-row .crew-ctrls,
+  .chk .row-ctrls,
+  .sec-ctrls {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15) !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+    transform-origin: center center !important;
+  }
+  .row-controls button,
+  .crew-ctrls button,
+  .crew-role-row .crew-ctrls button,
+  .chk .row-ctrls button,
+  .sec-ctrls button { color: var(--accent-text) !important; }
+  .row-controls button:hover,
+  .crew-ctrls button:hover,
+  .crew-role-row .crew-ctrls button:hover,
+  .chk .row-ctrls button:hover,
+  .sec-ctrls button:hover {
+    background: color-mix(in oklch, var(--accent) 80%, #000) !important;
+    color: var(--accent-text) !important;
+  }
+  /* Magnify on hover in light mode */
+  tr:hover .row-controls,
+  .crew-row:hover .crew-ctrls,
+  .chk:hover .row-ctrls { transform: translateY(-50%) scale(1.2) !important; }
+  .crew-role-row:hover .crew-ctrls,
+  .section-head:hover .sec-ctrls { transform: scale(1.2) !important; }
 
   * { box-sizing: border-box; }
   html, body {
@@ -537,8 +602,7 @@
   .crew-role-row .crew-ctrls button {
     width: 12px; height: 12px; font-size: 8px;
   }
-  body.editing .crew-role-row .crew-ctrls { display: flex; opacity: 0.5; transition: opacity .15s; }
-  body.editing .crew-role-row:hover .crew-ctrls { opacity: 1; }
+  body.editing .crew-role-row .crew-ctrls { display: flex; opacity: 1; }
   .crew-role-add {
     display: none;
     margin-top: 4px;
@@ -660,8 +724,7 @@
     box-shadow: 0 2px 6px rgba(0,0,0,.10);
     padding: 3px 4px; border-radius: 5px;
   }
-  body.editing .sec-ctrls { display: flex; opacity: 0.5; transition: opacity .15s; }
-  body.editing .section-head:hover .sec-ctrls { opacity: 1; }
+  body.editing .sec-ctrls { display: flex; opacity: 1; }
   .sec-ctrls button {
     width: 20px; height: 20px; padding: 0; border: none; background: transparent;
     border-radius: 3px; cursor: pointer; color: var(--ink-3); font-size: 11px; line-height: 1;
@@ -720,8 +783,7 @@
     padding: 3px 4px; border-radius: 5px;
     z-index: 10; white-space: nowrap;
   }
-  body.editing tr .row-controls { display: flex; opacity: 0.5; transition: opacity .15s; }
-  body.editing tr:hover .row-controls { opacity: 1; }
+  body.editing tr .row-controls { display: flex; opacity: 1; }
   .row-controls button {
     width: 18px; height: 18px; padding: 0;
     border: none; background: transparent;
@@ -790,8 +852,7 @@
     transform: translateY(-50%) scale(1.2);
     box-shadow: 0 4px 10px rgba(0,0,0,.15);
   }
-  body.editing .crew-row .crew-ctrls { display: flex; opacity: 0.5; transition: opacity .15s, transform 0.15s ease, box-shadow 0.15s ease; }
-  body.editing .crew-row:hover .crew-ctrls { opacity: 1; }
+  body.editing .crew-row .crew-ctrls { display: flex; opacity: 1; transition: transform 0.15s ease, box-shadow 0.15s ease; }
   .crew-ctrls button {
     width: 12px; height: 12px; padding: 0;
     border: none; background: transparent;
@@ -820,8 +881,7 @@
     transform: translateY(-50%) scale(1.2);
     box-shadow: 0 4px 10px rgba(0,0,0,.15);
   }
-  body.editing .chk .row-ctrls { display: flex; opacity: 0.5; transition: opacity .15s, transform 0.15s ease, box-shadow 0.15s ease; }
-  body.editing .chk:hover .row-ctrls { opacity: 1; }
+  body.editing .chk .row-ctrls { display: flex; opacity: 1; transition: transform 0.15s ease, box-shadow 0.15s ease; }
   .chk .row-ctrls button {
     width: 12px; height: 12px; padding: 0;
     border: none; background: transparent;
