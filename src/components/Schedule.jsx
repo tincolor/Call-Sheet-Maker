@@ -92,6 +92,9 @@ export function Schedule({
           })}
         </tbody>
       </table>
+      {!showAddControls && (
+        <div class="sched-cont-footer">Continued on next page.</div>
+      )}
       {showAddControls && (
         <div class="add-row">
           <button onClick={handleAddRow}>+ Add row</button>
@@ -153,10 +156,15 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
 
   const rc = (
     <div class="row-controls">
-      <button class="drag-handle row-drag-handle" title="Drag to reorder" onMouseDown={handleMouseDown}>⠿</button>
-      <button onClick={() => handleRowAction('up', gi)}>↑</button>
+<button onClick={() => handleRowAction('up', gi)}>↑</button>
       <button onClick={() => handleRowAction('down', gi)}>↓</button>
-      <button onClick={() => handleRowAction('brk', gi)} title="Page break before">⤓</button>
+      <button onClick={() => handleRowAction('brk', gi)} title="Page break before">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m16 16-4 4-4-4"/>
+          <path d="M3 12h18"/>
+          <path d="m8 8 4-4 4 4"/>
+        </svg>
+      </button>
       <button onClick={(e) => handleRowAction('del', gi, e.currentTarget)}>×</button>
     </div>
   );

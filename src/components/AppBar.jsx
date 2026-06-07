@@ -41,7 +41,7 @@ export function AppBar() {
       <button title="Delete current day" onClick={(e) => deleteDay(e.currentTarget)}>Delete Day</button>
       <button title="Import CSV into current day" onClick={(e) => importCSV(e.currentTarget)}>Import CSV</button>
       <button title="Export current day as CSV" onClick={(e) => exportCSV(e.currentTarget)}>Export CSV</button>
-      <button title="Tweaks" onClick={() => document.body.classList.toggle('tweaks-open')}>Tweaks</button>
+      <button title="Options" onClick={() => document.body.classList.toggle('tweaks-open')}>Options</button>
       <button title="Wipe all days" onClick={(e) => handleReset(e.currentTarget)}>Reset All</button>
       <button title="How to use this app" onClick={() => document.body.classList.toggle('how-to-use-open')}>How To Use</button>
       <button class="primary" title="Print or save as PDF (Cmd/Ctrl+P)" onClick={() => window.print()}>Print / PDF</button>

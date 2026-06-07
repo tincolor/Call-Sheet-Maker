@@ -1,4 +1,15 @@
 import { useEffect } from 'preact/hooks';
+import skillMd from '../../Claude SKILL.md?raw';
+
+function downloadSkillFile() {
+  const blob = new Blob([skillMd], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Claude SKILL.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function HowToUsePanel() {
   const closePanel = () => {
@@ -100,6 +111,22 @@ export function HowToUsePanel() {
             </ol>
             <p style="font-size:11px;color:var(--ink-3);margin-top:4px;">
               Your key is saved locally in this browser only, so no one can see your data or use your API key. Usage will be billed to your Anthropic developer account.
+            </p>
+          </div>
+
+          {/* Claude App Skill */}
+          <div class="how-to-use-section">
+            <h4>Using Claude App Instead?</h4>
+            <p>
+              If you prefer to use the <strong>Claude desktop or web app</strong> rather than the built-in AI intake, you can teach Claude how to format call sheets correctly by uploading the skill file once at the start of your conversation.
+            </p>
+            <p>
+              <button class="how-to-use-download-btn" onClick={downloadSkillFile}>
+                ↓ Download Claude SKILL.md
+              </button>
+            </p>
+            <p style="font-size:11px;color:var(--ink-3);margin-top:4px;">
+              Upload this file to Claude at the start of a new conversation and say <em>"Use this skill file to format my notes into a call sheet CSV."</em> Claude will then know exactly how to structure the output for import into this app.
             </p>
           </div>
 

@@ -172,8 +172,7 @@ export function Section({
             />
           </h3>
           <div class="sec-ctrls">
-            <button class="drag-handle sec-drag-handle" title="Drag to reorder section" onMouseDown={handleMouseDown}>⠿</button>
-            <button onClick={() => handleSectionAction('up')} title="Move up">↑</button>
+<button onClick={() => handleSectionAction('up')} title="Move up">↑</button>
             <button onClick={() => handleSectionAction('down')} title="Move down">↓</button>
             <button onClick={(e) => handleSectionAction('del', e.currentTarget)} title="Delete section">✕</button>
           </div>
