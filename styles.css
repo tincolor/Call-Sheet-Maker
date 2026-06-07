@@ -217,6 +217,14 @@
     border-top: 1px solid var(--rule);
     transform: translateX(-50%) rotate(45deg);
   }
+  .confirm-popover--above::before {
+    top: auto;
+    bottom: -6px;
+    border-left: none;
+    border-top: none;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
   .confirm-popover-msg {
     white-space: pre-wrap;
     color: var(--ink-2);
