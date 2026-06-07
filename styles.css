@@ -627,10 +627,11 @@
   }
 
   /* ──────────────── PAGE BREAK MARKERS ──────────────── */
-  .pbreak-slot { display: none; margin: 6px 0; }
+  .pbreak-slot { display: none; height: 0; margin: 0; position: relative; z-index: 8; }
   body.editing .pbreak-slot { display: block; }
   .pbreak-slot .pbreak-add {
     display: block; width: 100%;
+    position: absolute; left: 0; right: 0; top: -10px;
     background: transparent; border: none;
     color: color-mix(in oklch, var(--accent) 50%, transparent);
     font-size: 9px; padding: 3px 0; cursor: pointer; text-align: center;

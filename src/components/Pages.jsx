@@ -55,9 +55,27 @@ function MeasureLayer({ state }) {
         </div>
         <div class="measure-probes">
           {(state.sections || []).filter(sec => sec.type === 'schedule').map(sec => (
-            <div class="sched-cont-content measure-continuation" data-section-id={sec.id} key={sec.id}>
-              <div class="sched-cont-title">{sec.title}</div>
-              <div class="sched-cont-subtitle">Continued from previous page.</div>
+            <div class="section section--schedule measure-continuation" data-section-id={sec.id} key={sec.id}>
+              <div class="section-body">
+                <div>
+                  <div class="sched-cont-content">
+                    <div class="sched-cont-title">{sec.title}</div>
+                    <div class="sched-cont-subtitle">Continued from previous page.</div>
+                  </div>
+                  <table class="sched">
+                    <thead>
+                      <tr>
+                        <th class="time">Time</th>
+                        <th class="task">Task</th>
+                        <th class="loc">Location</th>
+                        <th class="cast">Cast / Extras</th>
+                        <th class="note">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody />
+                  </table>
+                </div>
+              </div>
             </div>
           ))}
         </div>

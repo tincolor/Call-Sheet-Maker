@@ -57,7 +57,7 @@ export function measureDayLayout(state, paperSize = 'a4') {
       rows: rowHeights,
       addControlsHeight,
       firstScheduleBase: Math.max(0, fullHeight - rowTotal - addControlsHeight),
-      continuationBase: continuationHeight + tableHeadHeight,
+      continuationBase: continuationHeight,
     };
   });
 
