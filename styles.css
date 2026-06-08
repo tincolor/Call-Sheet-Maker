@@ -741,7 +741,7 @@
   .section h3 .title { flex: 1; }
   .sec-ctrls {
     display: none; gap: 3px;
-    position: absolute; left: calc(100% + 14mm); top: 0;
+    position: absolute; left: calc(100% + 22mm); top: 0;
     white-space: nowrap;
     background: var(--paper);
     border: 1px solid var(--rule);
@@ -782,7 +782,27 @@
   table.sched tr.after-break-row:not(.sched-page-header) > td:first-child { border-top: 2px dashed var(--accent); }
   table.sched tr.after-break-row:not(.sched-page-header) { break-before: page; }
   table.sched tr.after-break-row:not(.sched-page-header) > td { padding-top: 12mm; }
-  table.sched tbody tr:hover { background: color-mix(in oklch, var(--accent) 2.5%, transparent); }
+  table.sched tbody tr:hover,
+  body.editing table.sched tr:has(.row-controls:hover) {
+    background: color-mix(in oklch, var(--accent) 2.5%, transparent);
+  }
+  body.editing table.sched tr:has(.row-controls:hover) > td {
+    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--accent) 24%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--accent) 24%, transparent);
+  }
+  body.editing table.sched tr:has(.row-controls:hover) > td:first-child {
+    box-shadow: inset 1px 0 0 color-mix(in oklch, var(--accent) 24%, transparent), inset 0 1px 0 color-mix(in oklch, var(--accent) 24%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--accent) 24%, transparent);
+  }
+  body.editing table.sched tr:has(.row-controls:hover) > td:last-child {
+    box-shadow: inset -1px 0 0 color-mix(in oklch, var(--accent) 24%, transparent), inset 0 1px 0 color-mix(in oklch, var(--accent) 24%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--accent) 24%, transparent);
+  }
+  body.editing .crew-row:has(> .crew-ctrls:hover),
+  body.editing .crew-role-row:has(> .crew-ctrls:hover),
+  body.editing .chk:has(> .row-ctrls:hover),
+  body.editing .section:has(.sec-ctrls:hover) {
+    background: color-mix(in oklch, var(--accent) 2.5%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent);
+    border-radius: 3px;
+  }
 
   table.sched .time { font-family: var(--font-mono); font-weight: 600; text-align: center; white-space: nowrap; width: 9%; }
   table.sched .time .dur { display: block; font-weight: 400; color: var(--ink-3); font-size: 10px; margin-top: 2px; }
@@ -799,24 +819,24 @@
 
   /* Schedule row controls — float in the right margin OUTSIDE the white paper area */
   .row-controls {
-    position: absolute; left: calc(100% + 14mm); top: 50%; transform: translateY(-50%);
-    display: none; flex-direction: row; gap: 3px;
+    position: absolute; left: calc(100% + 22mm); top: 50%; transform: translateY(-50%);
+    display: none; flex-direction: row; gap: 2px;
     background: var(--paper);
     border: 1px solid var(--rule);
     box-shadow: 0 2px 6px rgba(0,0,0,.10);
-    padding: 3px 4px; border-radius: 5px;
+    padding: 1px 2px; border-radius: 4px;
     z-index: 10; white-space: nowrap;
   }
   body.editing tr .row-controls { display: flex; opacity: 1; }
   .row-controls button {
-    width: 18px; height: 18px; padding: 0;
+    width: 12px; height: 12px; padding: 0;
     border: none; background: transparent;
     border-radius: 3px; cursor: pointer; color: var(--ink-3);
-    font-size: 11px; line-height: 1;
+    font-size: 8px; line-height: 1;
     display: flex; align-items: center; justify-content: center;
   }
   .row-controls button:hover { color: var(--accent); background: var(--accent-soft); }
-  .drag-handle { cursor: grab !important; font-size: 13px !important; letter-spacing: -1px; }
+  .drag-handle { cursor: grab !important; font-size: 8px !important; letter-spacing: -0.5px; }
 
   body.editing tr.drag-over > td { background: color-mix(in oklch, var(--accent) 8%, transparent); }
   body.editing tr.dragging { opacity: 0.4; }
@@ -863,7 +883,7 @@
     overflow-wrap: anywhere;
   }
   .crew-row .crew-ctrls {
-    position: absolute; left: calc(100% + 14mm); top: 50%; transform: translateY(-50%);
+    position: absolute; left: calc(100% + 22mm); top: 50%; transform: translateY(-50%);
     display: none; flex-direction: row; gap: 2px;
     background: var(--paper); border: 1px solid var(--rule);
     box-shadow: 0 2px 6px rgba(0,0,0,.10);
@@ -892,7 +912,7 @@
   body.editing .equip-list { grid-template-columns: 1fr; }
   .equip-list .chk { position: relative; }
   .chk .row-ctrls {
-    position: absolute; left: calc(100% + 14mm); top: 50%; transform: translateY(-50%);
+    position: absolute; left: calc(100% + 22mm); top: 50%; transform: translateY(-50%);
     display: none; flex-direction: row; gap: 2px;
     background: var(--paper); border: 1px solid var(--rule);
     box-shadow: 0 2px 6px rgba(0,0,0,.10);
