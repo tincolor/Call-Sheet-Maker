@@ -1,4 +1,15 @@
 import { useEffect } from 'preact/hooks';
+import skillMd from '../../Claude SKILL.md?raw';
+
+function downloadSkillFile() {
+  const blob = new Blob([skillMd], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Claude SKILL.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function HowToUsePanel() {
   const closePanel = () => {
@@ -36,8 +47,9 @@ export function HowToUsePanel() {
           <div class="how-to-use-section">
             <h4>About Call Sheet Maker</h4>
             <p>
-              Make call sheets the easy way. Use Claude to make sense of all the info that needs to go into a call sheet. It doesn't matter if it's in a long chat group, spread over multiple emails, or if it's in your head. Feed all that data to Claude and it will automatically put it into the call sheet for you. And if Claude makes a mistake, or if you want to adjust something, you can do that too. Or if you hate AI and want to do it all yourself, you can do that, too!
+              Make call sheets the easy way. Use Claude to make sense of all the info that needs to go into a call sheet. It doesn't matter if it's in a long group chat, spread over multiple emails, or if it's in your head. Feed all that data to Claude and it will automatically put it into the call sheet for you. And if Claude makes a mistake, or if you want to adjust something, you can do that too. Or if you hate AI and want to do it all yourself, you can do that, too!
             </p>
+            <p><strong>Note:</strong> Works best in Chrome.</p>
           </div>
 
           {/* Workflow */}
@@ -100,6 +112,22 @@ export function HowToUsePanel() {
             </ol>
             <p style="font-size:11px;color:var(--ink-3);margin-top:4px;">
               Your key is saved locally in this browser only, so no one can see your data or use your API key. Usage will be billed to your Anthropic developer account.
+            </p>
+          </div>
+
+          {/* Claude App Skill */}
+          <div class="how-to-use-section">
+            <h4>Using Claude App Instead?</h4>
+            <p>
+              If you prefer to use the <strong>Claude desktop or web app</strong> rather than the built-in AI intake, you can teach Claude how to format call sheets correctly by uploading the skill file once at the start of your conversation.
+            </p>
+            <p>
+              <button class="how-to-use-download-btn" onClick={downloadSkillFile}>
+                ↓ Download Claude SKILL.md
+              </button>
+            </p>
+            <p style="font-size:11px;color:var(--ink-3);margin-top:4px;">
+              Upload this file to Claude at the start of a new conversation and say <em>"Use this skill file to format my notes into a call sheet CSV."</em> Claude will then know exactly how to structure the output for import into this app.
             </p>
           </div>
 

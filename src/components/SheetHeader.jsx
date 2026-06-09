@@ -104,6 +104,14 @@ function HeaderCrewRoles({ state }) {
     save();
   };
 
+  const moveRole = (idx, dir) => {
+    const roles = state.meta.crewRoles;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= roles.length) return;
+    [roles[idx], roles[newIdx]] = [roles[newIdx], roles[idx]];
+    save();
+  };
+
   const handleRoleKeyDown = (idx) => (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -114,7 +122,11 @@ function HeaderCrewRoles({ state }) {
     <div class="hd-crew" id="headerCrew">
       {state.meta.crewRoles.map((item, idx) => (
         <div class="crew-role-row" data-crew-role-id={item.id} key={item.id}>
-          <button class="crew-role-del" title="Delete role" onClick={(e) => removeRole(idx, e.currentTarget)}>×</button>
+          <span class="crew-ctrls">
+            <button type="button" onClick={() => moveRole(idx, -1)} title="Move up">↑</button>
+            <button type="button" onClick={() => moveRole(idx, 1)} title="Move down">↓</button>
+            <button type="button" class="rm" onClick={(e) => removeRole(idx, e.currentTarget)} title="Delete">×</button>
+          </span>
           <ContentEditable
             value={item.role}
             onCommit={(val) => updateRole(idx, 'role', val)}

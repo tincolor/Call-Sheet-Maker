@@ -1,5 +1,10 @@
 .DS_Store
 node_modules
-dist
+dist/
 .env
-Call Sheet Maker.html
+exports/
+releases/
+*.zip
+Call Sheet Maker*.html
+package-lock.json
+thumbnail/

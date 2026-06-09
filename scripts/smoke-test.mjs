@@ -28,7 +28,7 @@ function checkSyntax(path) {
 
 const index = await read('index.html');
 const styles = await read('styles.css');
-const release = await read('Call Sheet Maker.html');
+const release = await read('exports/Call Sheet Maker.html');
 const mainJs = await read('src/main.jsx');
 
 assert(index.includes('<link rel="stylesheet" href="styles.css" />'), 'index.html must load styles.css');
@@ -36,8 +36,8 @@ assert(index.includes('<script type="module" src="/src/main.jsx"></script>'), 'i
 assert(styles.includes('.paper'), 'styles.css should contain sheet styles');
 
 // Verify that the release build has inlined CSS and JS
-assert(release.includes('Company Name'), 'Call Sheet Maker.html should contain placeholder default data');
-assert(release.includes('class:`paper`') || release.includes('class:"paper"'), 'Call Sheet Maker.html should contain sheet template structure');
+assert(release.includes('Company Name'), 'exports/Call Sheet Maker.html should contain placeholder default data');
+assert(release.includes('class:`paper`') || release.includes('class:"paper"'), 'exports/Call Sheet Maker.html should contain sheet template structure');
 
 
 

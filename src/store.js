@@ -73,8 +73,10 @@ export function load() {
       const s = JSON.parse(raw);
       if (s && s.days && s.currentDayId) {
         s.days.forEach(fixupLogos);
-        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4' };
+        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4', accentColor: 'red', darkMode: false };
         if (!('paperSize' in s.tweaks)) s.tweaks.paperSize = 'a4';
+        if (!('accentColor' in s.tweaks)) s.tweaks.accentColor = 'red';
+        if (!('darkMode' in s.tweaks)) s.tweaks.darkMode = false;
         return s;
       }
     }
