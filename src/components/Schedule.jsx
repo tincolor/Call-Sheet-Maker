@@ -268,6 +268,7 @@ function ScheduleRow({ row, gi, cols, handleCellChange, handleRowAction }) {
           <ContentEditable
             tagName="b"
             className=""
+            multiline
             placeholder="Travel / wrap description"
             value={row.text}
             onCommit={(val) => handleCellChange(gi, 'text', val)}
@@ -284,6 +285,7 @@ function ScheduleRow({ row, gi, cols, handleCellChange, handleRowAction }) {
         <td class={colClass(col)} key={col.key}>
           <ContentEditable
             className=""
+            multiline
             placeholder={col.label || 'Value'}
             value={row[col.key]}
             onCommit={(val) => handleCellChange(gi, col.key, val)}
