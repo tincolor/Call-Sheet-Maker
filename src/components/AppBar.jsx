@@ -1,4 +1,4 @@
-import { storeSignal, saveStatusSignal } from '../signals.js';
+import { storeSignal, saveStatusSignal, prelimSignal } from '../signals.js';
 import { app, save } from '../store.js';
 import { CS_KEY } from '../constants.js';
 import { DEFAULT_STORE } from '../data.js';
@@ -15,6 +15,12 @@ export function AppBar() {
   if (!store) return null;
 
   const isLetter = store.tweaks?.paperSize === 'letter';
+  const isPrelim = prelimSignal.value;
+
+  const togglePrelim = () => {
+    prelimSignal.value = !isPrelim;
+    document.body.classList.toggle('prelim', !isPrelim);
+  };
 
   const handleReset = async (anchor) => {
     if (!(await confirmPopover(anchor, 'Wipe ALL days and start fresh? This cannot be undone.', { confirmText: 'Reset all' }))) return;
@@ -46,6 +52,11 @@ export function AppBar() {
       <button title="Options" onClick={() => document.body.classList.toggle('tweaks-open')}>Options</button>
       <button title="Wipe all days" onClick={(e) => handleReset(e.currentTarget)}>Reset All</button>
       <button title="How to use this app" onClick={() => document.body.classList.toggle('how-to-use-open')}>How To Use</button>
+      <button
+        title="Toggle PRELIM watermark on each page"
+        class={isPrelim ? 'active' : ''}
+        onClick={togglePrelim}
+      >Prelim</button>
       <button class="primary" title="Print or save as PDF (Cmd/Ctrl+P)" onClick={() => window.print()}>Print / PDF</button>
     </div>
   );
