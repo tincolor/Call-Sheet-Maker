@@ -2,6 +2,7 @@ import { Fragment } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
 import { SheetHeader } from './SheetHeader.jsx';
 import { Sections, Section, PageBreakSlot, addSection } from './Sections.jsx';
+import { SchedHead } from './Schedule.jsx';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
 import { measureDayLayout, paginateDay } from '../render/pagination.js';
@@ -63,15 +64,7 @@ function MeasureLayer({ state }) {
                     <div class="sched-cont-subtitle">Continued from previous page.</div>
                   </div>
                   <table class="sched">
-                    <thead>
-                      <tr>
-                        <th class="time">Time</th>
-                        <th class="task">Task</th>
-                        <th class="loc">Location</th>
-                        <th class="cast">Cast / Extras</th>
-                        <th class="note">Notes</th>
-                      </tr>
-                    </thead>
+                    <SchedHead sec={sec} />
                     <tbody />
                   </table>
                 </div>

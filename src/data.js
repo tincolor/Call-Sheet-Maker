@@ -1,4 +1,18 @@
 import { uid } from './utils.js';
+
+// ---- default schedule columns ----
+// "time" is structural (hosts time+duration and drives auto-calc) and is
+// always first; the rest can be renamed, resized, added and removed.
+export function SCHED_COLUMNS() {
+  return [
+    { key: 'time', label: 'Time', width: 9 },
+    { key: 'task', label: 'Task', width: 18 },
+    { key: 'loc',  label: 'Location', width: 24 },
+    { key: 'cast', label: 'Cast / Extras', width: 15 },
+    { key: 'note', label: 'Notes', width: 34 },
+  ];
+}
+
 // ---- default day (placeholder call sheet) ----
 export function DEFAULT_DAY() {
   return {
@@ -35,6 +49,7 @@ export function DEFAULT_DAY() {
   sections: [
     {
       id: uid(), type: 'schedule', title: 'Schedule',
+      columns: SCHED_COLUMNS(), autoTime: true,
       data: [
         { type:'row',  time:'Start Time', dur:'Duration', task:'Schedule Item', loc:'Location', cast:'Cast / Extras', note:'Notes' },
         { type:'row',  time:'Start Time', dur:'Duration', task:'Scene or Activity', loc:'Location', cast:'Cast / Extras', note:'Notes' },
@@ -136,7 +151,7 @@ export function BLANK_DAY() {
   logos: [],
   pageBreaks: [],
   sections: [
-    { id: uid(), type: 'schedule', title: 'Schedule', data: [] },
+    { id: uid(), type: 'schedule', title: 'Schedule', columns: SCHED_COLUMNS(), autoTime: true, data: [] },
     { id: uid(), type: 'contacts', title: 'Crew Contacts', data: [] },
     { id: uid(), type: 'hospital', title: 'Nearest Hospital',
       data: { name:'', addr:'', phone:'', hours:'', dist:'' } },

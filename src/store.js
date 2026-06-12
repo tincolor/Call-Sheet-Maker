@@ -1,6 +1,6 @@
 import { CS_KEY, CS_KEY_V1, MULTILINE_META_KEYS } from './constants.js';
 import { uid, htmlToText } from './utils.js';
-import { DEFAULT_STORE } from './data.js';
+import { DEFAULT_STORE, SCHED_COLUMNS } from './data.js';
 import { storeSignal, saveStatusSignal, commit } from './signals.js';
 import { logoBbc, logoSa } from './logos.js';
 
@@ -16,6 +16,43 @@ export const app = {
         || storeSignal.value?.days[0];
   },
 };
+
+// Guarantees a schedule section has a valid column model: "time" first,
+// sane labels, widths that sum to 100, and an autoTime flag. Tolerates
+// columns from old saves, CSV imports, and Claude output.
+const DEFAULT_COL_WIDTHS = { time: 9, task: 18, loc: 24, cast: 15, note: 34 };
+
+export function ensureScheduleColumns(sec) {
+  if (sec?.type !== 'schedule') return;
+  if (!Array.isArray(sec.columns) || !sec.columns.length) sec.columns = SCHED_COLUMNS();
+  sec.columns = sec.columns
+    .filter(c => c && typeof c === 'object' && c.key)
+    .map(c => ({
+      key: String(c.key),
+      label: c.label != null ? htmlToText(String(c.label)) : '',
+      width: Number(c.width) > 0 ? Number(c.width) : 0,
+    }));
+  const ti = sec.columns.findIndex(c => c.key === 'time');
+  if (ti > 0) sec.columns.unshift(sec.columns.splice(ti, 1)[0]);
+  else if (ti < 0) sec.columns.unshift({ key: 'time', label: 'Time', width: 0 });
+  sec.columns.forEach(c => { if (!c.width) c.width = DEFAULT_COL_WIDTHS[c.key] || 0; });
+  const unsized = sec.columns.filter(c => !c.width);
+  if (unsized.length) {
+    const used = sec.columns.reduce((s, c) => s + c.width, 0);
+    const share = used < 100 ? (100 - used) / unsized.length : 12;
+    unsized.forEach(c => { c.width = share; });
+  }
+  const total = sec.columns.reduce((s, c) => s + c.width, 0);
+  if (total > 0 && Math.abs(total - 100) > 0.5) {
+    sec.columns.forEach(c => { c.width = (c.width * 100) / total; });
+  }
+  if (typeof sec.autoTime !== 'boolean') sec.autoTime = true;
+}
+
+export function normalizeDay(day) {
+  normalizeMultilineFields(day);
+  (day?.sections || []).forEach(ensureScheduleColumns);
+}
 
 export function normalizeMultilineFields(day) {
   if (!day?.meta) return;
@@ -62,7 +99,7 @@ export function fixupLogos(day) {
     if (day.logos[1]?.label === 'Street Attack' && !day.logos[1].dataUrl) day.logos[1].dataUrl = logoSa;
   }
   if (!day.pageBreaks) day.pageBreaks = [];
-  normalizeMultilineFields(day);
+  normalizeDay(day);
 }
 
 export function load() {
