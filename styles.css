@@ -295,6 +295,16 @@
     overflow-x: auto;
     min-width: 0;
   }
+  .privacy-banner {
+    text-align: center;
+    padding: 8px 24px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid color-mix(in oklch, var(--accent) 20%, transparent);
+    background: color-mix(in oklch, var(--accent) 5%, var(--bg));
+  }
   .appbar .brand {
     font-weight: 600; letter-spacing: -0.01em;
     display: flex; align-items: baseline; gap: 10px;
