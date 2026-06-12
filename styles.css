@@ -491,7 +491,6 @@
     font-size: var(--fs-cell);
     line-height: 1.4;
     position: relative;
-    overflow: hidden;
   }
   .pagination-measure {
     position: absolute;
