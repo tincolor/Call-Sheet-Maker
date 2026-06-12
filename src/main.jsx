@@ -4,6 +4,7 @@ import { AppBar } from './components/AppBar.jsx';
 import { TweaksPanel } from './components/TweaksPanel.jsx';
 import { IntakeSidebar } from './components/IntakeSidebar.jsx';
 import { HowToUsePanel } from './components/HowToUsePanel.jsx';
+import { VersionNotesPanel } from './components/VersionNotesPanel.jsx';
 import { load, app } from './store.js';
 import { renderSheet } from './render/sheet.js';
 
@@ -20,6 +21,9 @@ export function boot() {
 
   const howToUseRoot = document.getElementById('howToUseRoot');
   if (howToUseRoot) render(<HowToUsePanel />, howToUseRoot);
+
+  const versionNotesRoot = document.getElementById('versionNotesRoot');
+  if (versionNotesRoot) render(<VersionNotesPanel />, versionNotesRoot);
 
   const intakeSidebarRoot = document.getElementById('intakeSidebarRoot');
   if (intakeSidebarRoot) render(<IntakeSidebar />, intakeSidebarRoot);
