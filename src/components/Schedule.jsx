@@ -1,7 +1,7 @@
 import { ContentEditable } from './ContentEditable.jsx';
 import { save } from '../store.js';
 import { storeSignal } from '../signals.js';
-import { uid, confirmDel } from '../utils.js';
+import { uid, confirmDel, parseFlexibleTime, formatTimeValue, parseDurationValue, formatDurationValue } from '../utils.js';
 import { recalculateScheduleTimes, togglePageBreakRow } from '../render/schedule.js';
 import { SCHED_COLUMNS } from '../data.js';
 
@@ -122,6 +122,14 @@ export function Schedule({
   const auto = sec.autoTime !== false;
 
   const handleCellChange = (gi, field, val) => {
+    // normalize recognizable times/durations; free text passes through
+    if (field === 'time') {
+      const t = parseFlexibleTime(val);
+      if (t != null) val = formatTimeValue(t);
+    } else if (field === 'dur') {
+      const d = parseDurationValue(val);
+      if (d != null) val = formatDurationValue(d);
+    }
     sec.data[gi][field] = val;
     if (field === 'time' || field === 'dur') {
       recalculateScheduleTimes(sec, gi + 1);
@@ -247,13 +255,13 @@ function ScheduleRow({ row, gi, cols, handleCellChange, handleRowAction }) {
       {rc}
       <ContentEditable
         className=""
-        placeholder="00:00"
+        placeholder="Time"
         value={row.time}
         onCommit={(val) => handleCellChange(gi, 'time', val)}
       />
       <ContentEditable
         className="dur"
-        placeholder="dur"
+        placeholder="Duration"
         value={row.dur}
         onCommit={(val) => handleCellChange(gi, 'dur', val)}
       />

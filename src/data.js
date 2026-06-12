@@ -51,11 +51,11 @@ export function DEFAULT_DAY() {
       id: uid(), type: 'schedule', title: 'Schedule',
       columns: SCHED_COLUMNS(), autoTime: true,
       data: [
-        { type:'row',  time:'Start Time', dur:'Duration', task:'Schedule Item', loc:'Location', cast:'Cast / Extras', note:'Notes' },
-        { type:'row',  time:'Start Time', dur:'Duration', task:'Scene or Activity', loc:'Location', cast:'Cast / Extras', note:'Notes' },
-        { type:'span', time:'Time', dur:'Duration', text:'Meal Break or Company Move' },
-        { type:'row',  time:'Start Time', dur:'Duration', task:'Scene or Activity', loc:'Location', cast:'Cast / Extras', note:'Notes' },
-        { type:'span', time:'Time', dur:'',   text:'Wrap or End of Day' },
+        { type:'row',  time:'', dur:'', task:'Schedule Item', loc:'Location', cast:'Cast / Extras', note:'Notes' },
+        { type:'row',  time:'', dur:'', task:'Scene or Activity', loc:'Location', cast:'Cast / Extras', note:'Notes' },
+        { type:'span', time:'', dur:'', text:'Meal Break or Company Move' },
+        { type:'row',  time:'', dur:'', task:'Scene or Activity', loc:'Location', cast:'Cast / Extras', note:'Notes' },
+        { type:'span', time:'', dur:'', text:'Wrap or End of Day' },
       ],
     },
     {

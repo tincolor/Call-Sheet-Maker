@@ -537,6 +537,8 @@
   }
   /* Never show placeholder when editable contains only whitespace/br but has content */
   [contenteditable="true"]:not(:empty)::before { content: none !important; }
+  /* Placeholder clears as soon as the field is focused; returns on blur if empty */
+  [contenteditable="true"]:focus:empty::before { content: none !important; }
 
   [data-k="company"],
   [data-k="address"],
