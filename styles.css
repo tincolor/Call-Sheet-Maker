@@ -537,8 +537,15 @@
   }
   /* Never show placeholder when editable contains only whitespace/br but has content */
   [contenteditable="true"]:not(:empty)::before { content: none !important; }
-  /* Placeholder clears as soon as the field is focused; returns on blur if empty */
+  /* Placeholder clears as soon as the field is focused; returns on blur if empty.
+     The min size keeps the empty box (and its caret) from collapsing to a point. */
   [contenteditable="true"]:focus:empty::before { content: none !important; }
+  [contenteditable="true"]:focus:empty {
+    display: inline-block;
+    min-width: 3ch;
+    min-height: 1.2em;
+    vertical-align: baseline;
+  }
 
   [data-k="company"],
   [data-k="address"],
