@@ -1,9 +1,12 @@
-import { useRef, useLayoutEffect } from 'preact/hooks';
+import { useRef, useState, useLayoutEffect } from 'preact/hooks';
 import { htmlToText, textToHTML } from '../utils.js';
 
 export function ContentEditable({ value, onCommit, multiline, className, placeholder, tagName, onKeyDown }) {
   const ref = useRef(null);
   const focused = useRef(false);
+  // mirrors focused.current so the sync effect re-runs on blur even when the
+  // committed value didn't change (e.g. input already normalized while typing)
+  const [, setFocusTick] = useState(false);
 
   useLayoutEffect(() => {
     if (!focused.current && ref.current) {
@@ -19,7 +22,7 @@ export function ContentEditable({ value, onCommit, multiline, className, placeho
         }
       }
     }
-  }, [value, multiline]);
+  });
 
   const handleKeydown = (e) => {
     if (onKeyDown) onKeyDown(e);
@@ -50,6 +53,7 @@ export function ContentEditable({ value, onCommit, multiline, className, placeho
 
   const handleBlur = () => {
     focused.current = false;
+    setFocusTick(false);
     if (!ref.current) return;
     const txt = multiline ? htmlToText(ref.current.innerHTML) : ref.current.textContent;
     onCommit(txt);
@@ -64,7 +68,7 @@ export function ContentEditable({ value, onCommit, multiline, className, placeho
       suppressContentEditableWarning
       class={className}
       data-placeholder={placeholder}
-      onFocus={() => { focused.current = true; }}
+      onFocus={() => { focused.current = true; setFocusTick(true); }}
       onBlur={handleBlur}
       onInput={handleInput}
       onKeyDown={handleKeydown}
