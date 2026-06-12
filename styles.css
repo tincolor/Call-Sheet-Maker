@@ -118,6 +118,7 @@
   body.dark-mode .crew-ctrls,
   body.dark-mode .crew-role-row .crew-ctrls,
   body.dark-mode .chk .row-ctrls,
+  body.dark-mode .col-controls,
   body.dark-mode .sec-ctrls {
     background: var(--accent);
     border-color: var(--accent);
@@ -127,6 +128,7 @@
   body.dark-mode .crew-ctrls button,
   body.dark-mode .crew-role-row .crew-ctrls button,
   body.dark-mode .chk .row-ctrls button,
+  body.dark-mode .col-controls button,
   body.dark-mode .sec-ctrls button {
     color: var(--accent-text);
   }
@@ -134,6 +136,7 @@
   body.dark-mode .crew-ctrls button:hover,
   body.dark-mode .crew-role-row .crew-ctrls button:hover,
   body.dark-mode .chk .row-ctrls button:hover,
+  body.dark-mode .col-controls button:hover,
   body.dark-mode .sec-ctrls button:hover {
     background: color-mix(in oklch, var(--accent) 80%, #000);
     color: var(--accent-text);
@@ -144,6 +147,7 @@
   .crew-ctrls,
   .crew-role-row .crew-ctrls,
   .chk .row-ctrls,
+  .col-controls,
   .sec-ctrls {
     background: var(--accent) !important;
     border-color: var(--accent) !important;
@@ -155,11 +159,13 @@
   .crew-ctrls button,
   .crew-role-row .crew-ctrls button,
   .chk .row-ctrls button,
+  .col-controls button,
   .sec-ctrls button { color: var(--accent-text) !important; }
   .row-controls button:hover,
   .crew-ctrls button:hover,
   .crew-role-row .crew-ctrls button:hover,
   .chk .row-ctrls button:hover,
+  .col-controls button:hover,
   .sec-ctrls button:hover {
     background: color-mix(in oklch, var(--accent) 80%, #000) !important;
     color: var(--accent-text) !important;
@@ -531,6 +537,15 @@
   }
   /* Never show placeholder when editable contains only whitespace/br but has content */
   [contenteditable="true"]:not(:empty)::before { content: none !important; }
+  /* Placeholder clears as soon as the field is focused; returns on blur if empty.
+     The min size keeps the empty box (and its caret) from collapsing to a point. */
+  [contenteditable="true"]:focus:empty::before { content: none !important; }
+  [contenteditable="true"]:focus:empty {
+    display: inline-block;
+    min-width: 3ch;
+    min-height: 1.2em;
+    vertical-align: baseline;
+  }
 
   [data-k="company"],
   [data-k="address"],
@@ -794,6 +809,7 @@
     border-right: 1px solid var(--rule);
     padding: 6px 8px; font-size: var(--fs-h); font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); text-align: center;
+    position: relative; overflow: visible;
   }
   table.sched thead th:last-child { border-right: none; }
   table.sched td {
@@ -830,12 +846,10 @@
     border-radius: 3px;
   }
 
-  table.sched .time { font-family: var(--font-mono); font-weight: 600; text-align: center; white-space: nowrap; width: 9%; }
+  /* Column widths come from each section's column model (inline th styles) */
+  table.sched .time { font-family: var(--font-mono); font-weight: 600; text-align: center; white-space: nowrap; }
   table.sched .time .dur { display: block; font-weight: 400; color: var(--ink-3); font-size: 10px; margin-top: 2px; }
-  table.sched .task { width: 18%; font-weight: 500; }
-  table.sched .loc  { width: 24%; }
-  table.sched .cast { width: 15%; }
-  table.sched .note { width: 34%; }
+  table.sched .task { font-weight: 500; }
 
   table.sched tr.span td.spanned {
     font-weight: 500; text-align: center; color: var(--ink);
@@ -863,6 +877,61 @@
   }
   .row-controls button:hover { color: var(--accent); background: var(--accent-soft); }
   .drag-handle { cursor: grab !important; font-size: 8px !important; letter-spacing: -0.5px; }
+
+  /* Schedule column controls — pillbox above the header, right-aligned to the
+     column so it never covers the resize divider */
+  .col-controls {
+    position: absolute; right: 0; bottom: 100%;
+    display: none; flex-direction: row; gap: 2px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 6px rgba(0,0,0,.10);
+    padding: 1px 2px; border-radius: 4px;
+    z-index: 12; white-space: nowrap;
+    letter-spacing: normal; text-transform: none;
+  }
+  body.editing table.sched thead th:hover .col-controls { display: flex; }
+  .col-controls button {
+    width: 12px; height: 12px; padding: 0;
+    border: none; background: transparent;
+    border-radius: 3px; cursor: pointer; color: var(--ink-3);
+    font-size: 9px; line-height: 1; font-weight: 400;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .col-controls button:hover { color: var(--accent); background: var(--accent-soft); }
+
+  /* Schedule column resize handle — sits on the border between two headers */
+  .col-resizer {
+    position: absolute; top: 0; bottom: 0; right: -4px; width: 8px;
+    cursor: col-resize; z-index: 11; display: none;
+    touch-action: none;
+  }
+  .col-resizer::after {
+    content: ''; position: absolute; top: 2px; bottom: 2px; left: 3px; width: 2px;
+    border-radius: 1px; background: transparent;
+  }
+  .col-resizer:hover::after, .col-resizer.active::after { background: var(--accent); }
+  body.editing .col-resizer { display: block; }
+
+  /* Auto/manual time toggle — floats in the left margin like the header pillboxes */
+  .sched-wrap { position: relative; }
+  .sched-time-toggle {
+    position: absolute; right: calc(100% + 22mm); top: 0;
+    display: none; z-index: 10;
+  }
+  body.editing .sched-time-toggle { display: flex; }
+  .sched-time-toggle button {
+    display: flex; align-items: center; gap: 3px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: 0 2px 6px rgba(0,0,0,.10);
+    border-radius: 4px; padding: 3px 6px;
+    font: inherit; font-size: 8px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; white-space: nowrap;
+    color: var(--ink-3); cursor: pointer;
+  }
+  .sched-time-toggle button:hover { color: var(--accent); border-color: var(--accent); }
+  .sched-time-toggle button.on { color: var(--accent); border-color: color-mix(in oklch, var(--accent) 45%, var(--rule)); }
 
   body.editing tr.drag-over > td { background: color-mix(in oklch, var(--accent) 8%, transparent); }
   body.editing tr.dragging { opacity: 0.4; }
@@ -1337,7 +1406,8 @@
   @media print {
     html, body { background: #fff; }
     .appbar, .tweaks, .confirm-popover, .row-controls, .add-row, .sec-ctrls, .logo-ctrls, .logo-add, .crew-role-add, .add-sec, .pbreak-slot, .row-del,
-    .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer, .page-break-ctrl, .how-to-use-backdrop, .how-to-use-drawer { display: none !important; }
+    .crew-ctrls, .chk .row-ctrls, .drag-handle, .intake-resizer, .page-break-ctrl, .how-to-use-backdrop, .how-to-use-drawer,
+    .col-controls, .col-resizer, .sched-time-toggle { display: none !important; }
     /* Hide sidebar, show only call sheet */
     .workspace { display: block !important; height: auto !important; overflow: visible !important; }
     .intake-sidebar { display: none !important; }

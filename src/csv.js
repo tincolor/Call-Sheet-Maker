@@ -1,6 +1,12 @@
-import { app, save, normalizeMultilineFields } from './store.js';
+import { app, save, normalizeDay } from './store.js';
 import { confirmPopover, uid } from './utils.js';
 import { renderSheet } from './render/sheet.js';
+import { SCHED_COLUMNS } from './data.js';
+
+// Canonical schedule column keys ↔ CSV header tokens. Custom columns are
+// exported under their label and re-created from any unrecognized header.
+const SCHED_STANDARD_KEYS = new Set(['time', 'task', 'loc', 'cast', 'note']);
+const SCHED_STANDARD_LABELS = { task: 'Task', loc: 'Location', cast: 'Cast / Extras', note: 'Notes' };
 
 export function csvEscape(s) {
   s = s == null ? '' : String(s);
@@ -21,7 +27,17 @@ export function dayToCSVLines(day) {
   lines.push('');
   day.sections.forEach(sec => {
     lines.push(`# ${sec.type.toUpperCase()} · ${sec.title}`);
-    if (Array.isArray(sec.data)) {
+    if (sec.type === 'schedule') {
+      if (sec.data.length === 0) { lines.push(''); return; }
+      const columns = Array.isArray(sec.columns) && sec.columns.length ? sec.columns : SCHED_COLUMNS();
+      const extras = columns.filter(c => c.key !== 'time');
+      // header: standard columns under their canonical key, custom ones under
+      // their label; "text" carries spanning-row content
+      const tokens = ['type', 'time', 'dur', ...extras.map(c => SCHED_STANDARD_KEYS.has(c.key) ? c.key : (c.label || c.key)), 'text'];
+      const keys = ['type', 'time', 'dur', ...extras.map(c => c.key), 'text'];
+      lines.push(tokens.map(csvEscape).join(','));
+      sec.data.forEach(r => lines.push(keys.map(k => csvEscape(r[k])).join(',')));
+    } else if (Array.isArray(sec.data)) {
       if (sec.data.length === 0) { lines.push(''); return; }
       const cols = Object.keys(sec.data[0]);
       lines.push(cols.join(','));
@@ -98,7 +114,7 @@ export function importCSV(anchor) {
           pageBreaks: [],
           sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
         }));
-        fresh.forEach(normalizeMultilineFields);
+        fresh.forEach(normalizeDay);
 
         if (replace) {
           // Overwrite the current day in-place
@@ -151,7 +167,7 @@ export function parseCSVtoDrafts(txt) {
   const rows = parseCSV(txt);
   const drafts = [];
   let draft = null;
-  let mode = null, header = null, cur = null;
+  let mode = null, header = null, cur = null, colKeys = null;
 
   const ensureDraft = () => {
     if (!draft) { draft = { meta: {}, sections: [] }; drafts.push(draft); }
@@ -166,7 +182,7 @@ export function parseCSVtoDrafts(txt) {
     if (first.startsWith('# DAY')) {
       draft = { meta: {}, sections: [] };
       drafts.push(draft);
-      mode = null; header = null; cur = null;
+      mode = null; header = null; cur = null; colKeys = null;
       continue;
     }
     if (first.startsWith('# META')) { ensureDraft(); mode = 'meta'; continue; }
@@ -179,14 +195,14 @@ export function parseCSVtoDrafts(txt) {
       if (!VALID.includes(type)) {
         // comment — ignore but end any current section parse so stray keys don't
         // leak into the last section's data
-        mode = null; cur = null; header = null;
+        mode = null; cur = null; header = null; colKeys = null;
         continue;
       }
       ensureDraft();
       const title = titleParts.join(' · ').trim();
       cur = { id: uid(), type, title, data: ['hospital', 'basecamp', 'notes'].includes(type) ? {} : [] };
       draft.sections.push(cur);
-      mode = 'sec'; header = null; continue;
+      mode = 'sec'; header = null; colKeys = null; continue;
     }
     if (mode === 'meta') {
       if (r[0] === 'key' && r[1] === 'value') continue;
@@ -203,10 +219,36 @@ export function parseCSVtoDrafts(txt) {
         d.meta[r[0]] = r[1];
       }
     } else if (mode === 'sec' && cur) {
-      if (!header) { header = r; continue; }
+      if (!header) {
+        header = r;
+        if (cur.type === 'schedule') {
+          // map header tokens to row keys; unknown tokens become custom columns
+          cur.columns = [{ key: 'time', label: 'Time' }];
+          colKeys = header.map(h => {
+            const token = String(h || '').trim();
+            const lk = token.toLowerCase();
+            if (['type', 'time', 'dur', 'text'].includes(lk)) return lk;
+            if (SCHED_STANDARD_KEYS.has(lk)) {
+              cur.columns.push({ key: lk, label: SCHED_STANDARD_LABELS[lk] || token });
+              return lk;
+            }
+            if (!token) return null;
+            const key = 'col_' + uid();
+            cur.columns.push({ key, label: token });
+            return key;
+          });
+        }
+        continue;
+      }
       if (Array.isArray(cur.data)) {
         const obj = {};
-        header.forEach((h, i) => obj[h] = r[i] || '');
+        if (cur.type === 'schedule' && colKeys) {
+          header.forEach((h, i) => { const k = colKeys[i]; if (k) obj[k] = r[i] || ''; });
+          // skill-file spans put the label in "task"; the app renders "text"
+          if (obj.type === 'span' && !obj.text && obj.task) { obj.text = obj.task; delete obj.task; }
+        } else {
+          header.forEach((h, i) => obj[h] = r[i] || '');
+        }
         if (cur.type === 'equipment' && 'done' in obj) obj.done = obj.done === 'true';
         cur.data.push(obj);
       } else {

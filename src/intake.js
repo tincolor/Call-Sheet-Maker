@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import { app, save, normalizeMultilineFields } from './store.js';
+import { app, save, normalizeDay } from './store.js';
 import { uid, clamp } from './utils.js';
 import { INTAKE_WIDTH_KEY } from './constants.js';
 import { renderSheet } from './render/sheet.js';
@@ -105,7 +105,7 @@ Respond with ONLY a JSON object — no markdown fences, no prose:
 Operations ("day" is a 1-based index or "current"; it defaults to "current"):
 - { "op": "updateMeta", "day"?, "meta": { ...partial header fields... } }
 - { "op": "setSections", "day"?, "mode": "replace" | "append", "sections": [ ...section objects... ] }
-- { "op": "updateSection", "day"?, "match": "<section title>", "section": { "title"?, "data"? } }  // data replaces the whole section data
+- { "op": "updateSection", "day"?, "match": "<section title>", "section": { "title"?, "data"?, "columns"? } }  // data replaces the whole section data
 - { "op": "removeSection", "day"?, "match": "<section title>" }
 - { "op": "addDay", "meta"?: { ... }, "sections"?: [ ... ] }  // creates a new day and switches to it
 - { "op": "deleteDay", "day": <index> }
@@ -113,7 +113,9 @@ Operations ("day" is a 1-based index or "current"; it defaults to "current"):
 Meta fields: company, address, project, client, mainLocation, date, day, shootCall, emergency, weatherCallout, headerNote, sunrise, sunset, crewRoles (array of { "role", "names" }).
 
 Section shapes:
-{ "type": "schedule", "title": "...", "data": [ { "type": "row", "time": "...", "dur": "...", "task": "...", "loc": "...", "cast": "...", "note": "..." }, { "type": "span", "time": "...", "text": "..." } ] }
+{ "type": "schedule", "title": "...", "columns"?: [ { "key": "...", "label": "..." } ], "data": [ { "type": "row", "time": "...", "dur": "...", "task": "...", "loc": "...", "cast": "...", "note": "..." }, { "type": "span", "time": "...", "text": "..." } ] }
+
+Schedule columns default to time/task/loc/cast/note. A schedule section in the CURRENT SHEET may carry "columns" — its rows are keyed by those keys. Include "columns" in your output only to add, remove, or rename columns: send the complete new list ("time" must stay first and cannot be removed; invent a short key for each new column and key the row fields by it).
 { "type": "contacts", "title": "...", "data": [ { "role": "...", "name": "...", "phone": "..." } ] }
 { "type": "equipment", "title": "...", "data": [ { "text": "...", "done": false } ] }
 { "type": "hospital", "title": "...", "data": { "name": "...", "addr": "...", "phone": "...", "hours": "...", "dist": "..." } }
@@ -193,11 +195,21 @@ export function buildSheetContext() {
       // Full section data only for the current, real day. Other days (and
       // untouched templates) are summarized — enough to target ops, a
       // fraction of the tokens.
-      const sections = (d.sections || []).map(sec =>
-        (isCurrent && !placeholder)
-          ? { type: sec.type, title: sec.title, data: sec.data }
-          : { type: sec.type, title: sec.title, rows: Array.isArray(sec.data) ? sec.data.length : undefined }
-      );
+      const sections = (d.sections || []).map(sec => {
+        if (!isCurrent || placeholder) {
+          return { type: sec.type, title: sec.title, rows: Array.isArray(sec.data) ? sec.data.length : undefined };
+        }
+        const out = { type: sec.type, title: sec.title, data: sec.data };
+        // expose schedule columns only when they differ from the default set,
+        // so Claude knows which keys the rows use
+        if (sec.type === 'schedule' && Array.isArray(sec.columns)) {
+          const keys = sec.columns.map(c => c.key).join(',');
+          if (keys !== 'time,task,loc,cast,note') {
+            out.columns = sec.columns.map(({ key, label }) => ({ key, label }));
+          }
+        }
+        return out;
+      });
       return {
         index: i + 1,
         isCurrent,
@@ -302,7 +314,7 @@ function applyOp(op) {
     case 'updateMeta': {
       const day = resolveDay(op.day);
       Object.assign(day.meta, op.meta || {});
-      normalizeMultilineFields(day);
+      normalizeDay(day);
       break;
     }
     case 'setSections': {
@@ -310,7 +322,7 @@ function applyOp(op) {
       const fresh = freshSections(op.sections);
       if (op.mode === 'replace') day.sections = fresh;
       else day.sections.push(...fresh);
-      normalizeMultilineFields(day);
+      normalizeDay(day);
       break;
     }
     case 'updateSection': {
@@ -318,7 +330,8 @@ function applyOp(op) {
       const sec = findSection(day, op.match);
       if (op.section?.title != null) sec.title = op.section.title;
       if (op.section?.data != null) sec.data = op.section.data;
-      normalizeMultilineFields(day);
+      if (op.section?.columns != null) sec.columns = op.section.columns;
+      normalizeDay(day);
       break;
     }
     case 'removeSection': {
@@ -336,7 +349,7 @@ function applyOp(op) {
         sections: op.sections?.length ? freshSections(op.sections) : base.sections,
         logos: (current?.logos || []).map(l => ({ ...l })),
       };
-      normalizeMultilineFields(day);
+      normalizeDay(day);
       app.store.days.push(day);
       app.store.currentDayId = day.id;
       break;

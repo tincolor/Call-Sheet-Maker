@@ -86,6 +86,7 @@ span,17:00,,WRAP,,,
 - `type=span` for full-width dividers: LUNCH, WRAP, TRAVEL, BREAK. Put label in `task`; leave `loc`, `cast`, `note` empty.
 - `dur` format: `1h`, `30m`, `1h30m`. Leave blank if unknown.
 - Times in 24h format.
+- The standard header is `type,time,dur,task,loc,cast,note`. If Tom asks for extra schedule columns (e.g. vehicles, crew assignments), append them to the header with a human-readable label — `type,time,dur,task,loc,cast,note,Vehicles` — and fill the matching cell in each row. The app creates a custom column for every unrecognized header.
 
 #### CONTACTS (repeatable)
 

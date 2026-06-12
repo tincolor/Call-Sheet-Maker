@@ -131,13 +131,53 @@ export function formatTimeValue(totalMinutes) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
+// Forgiving time-of-day parser: "1430", "730", "14:30", "2:30 pm",
+// "2:30pm", "2pm", "14". Returns minutes since midnight, or null if the
+// text isn't a time (so free text like "TBD" passes through untouched).
+export function parseFlexibleTime(value) {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text) return null;
+  const m = text.match(/^(\d{1,2})(?::?(\d{2}))?\s*(am|pm)?\.?$/);
+  if (!m) return null;
+  let hours = Number(m[1]);
+  const mins = m[2] != null ? Number(m[2]) : 0;
+  if (m[3] === 'pm' && hours < 12) hours += 12;
+  if (m[3] === 'am' && hours === 12) hours = 0;
+  if (hours > 23 || mins > 59) return null;
+  return (hours * 60) + mins;
+}
+
 export function parseDurationValue(value) {
   const text = String(value || '').trim().toLowerCase();
   if (!text) return null;
+  // H:MM
+  const hm = text.match(/^(\d{1,2}):(\d{2})$/);
+  if (hm) {
+    const total = Number(hm[1]) * 60 + Number(hm[2]);
+    return total > 0 ? total : null;
+  }
+  // explicit units — "2h", "30m", "1h30m", "1 hour 30 minutes"
   const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*h/);
-  const minMatch = text.match(/(\d+)\s*m/);
-  const hours = hourMatch ? Math.round(Number(hourMatch[1]) * 60) : 0;
-  const mins = minMatch ? Number(minMatch[1]) : 0;
-  const total = hours + mins;
-  return total > 0 ? total : null;
+  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*m/);
+  if (hourMatch || minMatch) {
+    const total = Math.round(
+      (hourMatch ? Number(hourMatch[1]) * 60 : 0) + (minMatch ? Number(minMatch[1]) : 0)
+    );
+    return total > 0 ? total : null;
+  }
+  // bare number: 9 and up reads as minutes, 8 and below as hours
+  const num = text.match(/^(\d+(?:\.\d+)?)$/);
+  if (num) {
+    const n = Number(num[1]);
+    const total = Math.round(n >= 9 ? n : n * 60);
+    return total > 0 ? total : null;
+  }
+  return null;
+}
+
+export function formatDurationValue(total) {
+  if (total == null || total <= 0) return '';
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h && m ? `${h}h${m}m` : h ? `${h}h` : `${m}m`;
 }

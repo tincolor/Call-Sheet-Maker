@@ -3,6 +3,7 @@ import { ContentEditable } from './ContentEditable.jsx';
 import { app, save } from '../store.js';
 import { storeSignal } from '../signals.js';
 import { uid, confirmDel } from '../utils.js';
+import { SCHED_COLUMNS } from '../data.js';
 import { Schedule } from './Schedule.jsx';
 import { Contacts } from './Contacts.jsx';
 import { Equipment } from './Equipment.jsx';
@@ -169,7 +170,7 @@ export function Section({
 
 export function addSection(type) {
   const blank = { id: uid(), type, title: type[0].toUpperCase() + type.slice(1) };
-  if (type === 'schedule')  blank.data = [];
+  if (type === 'schedule')  { blank.data = []; blank.columns = SCHED_COLUMNS(); blank.autoTime = true; }
   if (type === 'contacts')  blank.data = [];
   if (type === 'equipment') blank.data = [];
   if (type === 'hospital')  blank.data = { name:'', addr:'', phone:'', hours:'', dist:'' };

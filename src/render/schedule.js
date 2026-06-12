@@ -2,6 +2,7 @@ import { app } from '../store.js';
 import { parseTimeValue, formatTimeValue, parseDurationValue } from '../utils.js';
 
 export function recalculateScheduleTimes(sec, startIndex = 1) {
+  if (sec.autoTime === false) return;
   for (let i = Math.max(1, startIndex); i < sec.data.length; i++) {
     const prev = sec.data[i - 1];
     const cur = sec.data[i];
