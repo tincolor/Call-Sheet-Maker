@@ -1,10 +1,8 @@
 import { Fragment } from 'preact';
-import { useRef } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { app, save } from '../store.js';
 import { storeSignal } from '../signals.js';
 import { uid, confirmDel } from '../utils.js';
-import { drag } from '../render/drag.js';
 import { Schedule } from './Schedule.jsx';
 import { Contacts } from './Contacts.jsx';
 import { Equipment } from './Equipment.jsx';
@@ -75,52 +73,6 @@ export function Section({
   const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
   if (!state) return null;
 
-  const trRef = useRef(null);
-
-  const handleMouseDown = () => {
-    if (trRef.current) trRef.current.draggable = true;
-  };
-
-  const handleDragStart = (e) => {
-    if (!trRef.current.draggable) {
-      e.preventDefault();
-      return;
-    }
-    drag.current = { type: 'section', id: sec.id };
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', sec.id);
-    trRef.current.classList.add('dragging');
-  };
-
-  const handleDragEnd = () => {
-    if (trRef.current) {
-      trRef.current.draggable = false;
-      trRef.current.classList.remove('dragging');
-    }
-    drag.current = null;
-    document.querySelectorAll('.section.drag-over').forEach(s => s.classList.remove('drag-over'));
-  };
-
-  const handleDragOver = (e) => {
-    if (drag.current?.type !== 'section' || drag.current.id === sec.id) return;
-    e.preventDefault();
-    document.querySelectorAll('.section.drag-over').forEach(s => s.classList.remove('drag-over'));
-    trRef.current.classList.add('drag-over');
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (trRef.current) trRef.current.classList.remove('drag-over');
-    if (!drag.current || drag.current.type !== 'section') return;
-    const fromIdx = state.sections.findIndex(s => s.id === drag.current.id);
-    const toIdx = state.sections.findIndex(s => s.id === sec.id);
-    drag.current = null;
-    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
-    const [moved] = state.sections.splice(fromIdx, 1);
-    state.sections.splice(toIdx, 0, moved);
-    save();
-  };
-
   const handleTitleChange = (val) => {
     sec.title = val;
     save();
@@ -152,13 +104,8 @@ export function Section({
 
   return (
     <div
-      ref={trRef}
       class={`section section--${sec.type} ${hasRowBreaks ? 'has-row-break' : ''}`}
       data-id={sec.id}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       {!scheduleContinuation && (
         <div class="section-head">

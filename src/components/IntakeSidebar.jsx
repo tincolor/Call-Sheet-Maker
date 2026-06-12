@@ -17,6 +17,8 @@ import {
   setIntakeWidth,
   setIntakeDraft,
   setIntakeStep,
+  intakeMemorySignal,
+  setIntakeMemory,
 } from '../intake.js';
 import { DEFAULT_DAY } from '../data.js';
 
@@ -96,8 +98,9 @@ function ApiKeyPanel() {
           value={apiModel}
           onChange={e => { setApiModel(e.currentTarget.value); saveApiKey(apiKey, e.currentTarget.value); }}
         >
-          <option value="claude-sonnet-4-5">Sonnet 4.5 (best)</option>
+          <option value="claude-sonnet-4-6">Sonnet 4.6 (best)</option>
           <option value="claude-haiku-4-5">Haiku 4.5 (fast)</option>
+          {apiModel === 'claude-sonnet-4-5' && <option value="claude-sonnet-4-5">Sonnet 4.5 (saved)</option>}
         </select>
         <p class="isb-warn">⚠ Usage bills to your Anthropic account.</p>
       </div>
@@ -118,17 +121,23 @@ function InputStep({ textareaRef, onInterpret }) {
 
   const loadExample = () => {
     const d = DEFAULT_DAY();
-    setIntakeDraft({ meta: d.meta, sections: d.sections });
+    setIntakeDraft({
+      note: 'Example data preview',
+      ops: [
+        { op: 'updateMeta', day: 'current', meta: d.meta },
+        { op: 'setSections', day: 'current', mode: 'replace', sections: d.sections },
+      ],
+    });
     setIntakeStep('verify');
   };
 
   return (
     <>
-      <p class="isb-lede">Paste raw notes — messages, emails, mixed languages — and Claude will structure them into the call sheet.</p>
+      <p class="isb-lede">Paste raw notes — messages, emails, mixed languages — or tell Claude what to change. It can fill in the sheet, edit sections, and add or remove days.</p>
       <textarea
         ref={textareaRef}
         class="isb-textarea"
-        placeholder="Paste anything — WhatsApp threads, emails, voice notes. Claude will interpret and organize it."
+        placeholder='Paste anything — WhatsApp threads, emails, voice notes — or give an instruction like "add a second day for June 14".'
       />
       <div class="isb-row-actions">
         <button class="isb-btn isb-btn--primary" onClick={onInterpret}>Interpret →</button>
@@ -139,8 +148,30 @@ function InputStep({ textareaRef, onInterpret }) {
           <button class="isb-btn isb-btn--ghost" onClick={loadExample}>Preview with example data</button>
         </div>
       )}
+      <MemoryPanel />
       <ApiKeyPanel />
     </>
+  );
+}
+
+// ── Intake memory panel ────────────────────────────────────────────────────
+
+function MemoryPanel() {
+  const memory = intakeMemorySignal.value;
+  if (!memory) return null;
+  return (
+    <details class="isb-api-panel">
+      <summary>
+        Intake memory
+        <span class="isb-pill isb-pill--active">{`~${Math.max(1, Math.round(memory.length / 4))} tokens`}</span>
+        <span class="isb-chev">▾</span>
+      </summary>
+      <div class="isb-api-body">
+        <p>Claude's running digest of everything you've pasted so far. It is sent with each request so follow-up pastes are understood in context. Clear it when you start a new production.</p>
+        <pre class="isb-memory-text">{memory}</pre>
+        <button class="isb-btn" onClick={() => setIntakeMemory('')}>Clear memory</button>
+      </div>
+    </details>
   );
 }
 
@@ -188,7 +219,7 @@ function Editable({ value, multiline, cls, onChange }) {
   );
 }
 
-function ScheduleRows({ data, si }) {
+function ScheduleRows({ data }) {
   return (
     <>
       {data.map((row, ri) => (
@@ -200,18 +231,18 @@ function ScheduleRows({ data, si }) {
             <Editable
               cls="isb-item-span"
               value={row.text}
-              onChange={v => { intakeDraft.sections[si].data[ri].text = v; }}
+              onChange={v => { row.text = v; }}
             />
           ) : (
             <>
               <Editable
                 cls="isb-item-task"
                 value={row.task}
-                onChange={v => { intakeDraft.sections[si].data[ri].task = v; }}
+                onChange={v => { row.task = v; }}
               />
-              {row.loc  && <Field label="loc"  value={row.loc}  onChange={v => { intakeDraft.sections[si].data[ri].loc  = v; }} />}
-              {row.cast && <Field label="cast" value={row.cast} onChange={v => { intakeDraft.sections[si].data[ri].cast = v; }} />}
-              {row.note && <Field label="note" value={row.note} onChange={v => { intakeDraft.sections[si].data[ri].note = v; }} />}
+              {row.loc  && <Field label="loc"  value={row.loc}  onChange={v => { row.loc  = v; }} />}
+              {row.cast && <Field label="cast" value={row.cast} onChange={v => { row.cast = v; }} />}
+              {row.note && <Field label="note" value={row.note} onChange={v => { row.note = v; }} />}
             </>
           )}
         </div>
@@ -229,18 +260,18 @@ function Field({ label, value, onChange }) {
   );
 }
 
-function ContactRows({ data, si }) {
+function ContactRows({ data }) {
   return (
     <>
       {data.map((c, ri) => (
         <div class="isb-item" key={ri}>
-          <Editable cls="isb-item-name" value={c.name} onChange={v => { intakeDraft.sections[si].data[ri].name = v; }} />
+          <Editable cls="isb-item-name" value={c.name} onChange={v => { c.name = v; }} />
           <div class="isb-field">
-            <Editable value={c.role} onChange={v => { intakeDraft.sections[si].data[ri].role = v; }} />
+            <Editable value={c.role} onChange={v => { c.role = v; }} />
             {c.phone && (
               <>
                 <span class="isb-sep">·</span>
-                <Editable value={c.phone} onChange={v => { intakeDraft.sections[si].data[ri].phone = v; }} />
+                <Editable value={c.phone} onChange={v => { c.phone = v; }} />
               </>
             )}
           </div>
@@ -250,20 +281,20 @@ function ContactRows({ data, si }) {
   );
 }
 
-function EquipmentRows({ data, si }) {
+function EquipmentRows({ data }) {
   return (
     <>
       {data.map((item, ri) => (
         <div class="isb-item isb-item--eq" key={ri}>
           <span class="isb-eq-mark">○</span>
-          <Editable value={item.text} onChange={v => { intakeDraft.sections[si].data[ri].text = v; }} />
+          <Editable value={item.text} onChange={v => { item.text = v; }} />
         </div>
       ))}
     </>
   );
 }
 
-function KVRows({ data, si }) {
+function KVRows({ data }) {
   return (
     <>
       {Object.entries(data).map(([k, v]) => (
@@ -273,7 +304,7 @@ function KVRows({ data, si }) {
             cls="isb-kv-val"
             multiline={typeof v === 'string' && v.includes('\n')}
             value={v}
-            onChange={val => { intakeDraft.sections[si].data[k] = val; }}
+            onChange={val => { data[k] = val; }}
           />
         </div>
       ))}
@@ -284,14 +315,14 @@ function KVRows({ data, si }) {
 function MetaRows({ meta }) {
   return (
     <>
-      {Object.entries(meta).map(([k, v]) => (
+      {Object.entries(meta).filter(([, v]) => typeof v === 'string').map(([k, v]) => (
         <div class="isb-kv-row" key={k}>
           <span class="isb-kv-key">{k}</span>
           <Editable
             cls="isb-kv-val"
-            multiline={typeof v === 'string' && v.includes('\n')}
+            multiline={v.includes('\n')}
             value={v}
-            onChange={val => { intakeDraft.meta[k] = val; }}
+            onChange={val => { meta[k] = val; }}
           />
         </div>
       ))}
@@ -299,23 +330,23 @@ function MetaRows({ meta }) {
   );
 }
 
-function SectionCard({ sec, si }) {
+function SectionCard({ sec }) {
   const { type, title, data } = sec;
   let rows;
   if (!Array.isArray(data) || data.length === 0) {
     if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-      rows = <KVRows data={data} si={si} />;
+      rows = <KVRows data={data} />;
     } else {
       rows = <p class="isb-empty">(empty)</p>;
     }
   } else if (type === 'schedule') {
-    rows = <ScheduleRows data={data} si={si} />;
+    rows = <ScheduleRows data={data} />;
   } else if (type === 'contacts') {
-    rows = <ContactRows data={data} si={si} />;
+    rows = <ContactRows data={data} />;
   } else if (type === 'equipment') {
-    rows = <EquipmentRows data={data} si={si} />;
+    rows = <EquipmentRows data={data} />;
   } else {
-    rows = <KVRows data={data} si={si} />;
+    rows = <KVRows data={data} />;
   }
 
   return (
@@ -329,23 +360,59 @@ function SectionCard({ sec, si }) {
   );
 }
 
-function VerifyStep({ draft, repairNote }) {
-  if (!draft) return <p class="isb-empty">No draft to preview.</p>;
+function opLabel(op) {
+  const dayRef = op.day == null || op.day === 'current' ? 'current day' : `day ${op.day}`;
+  switch (op.op) {
+    case 'updateMeta':    return `Update header — ${dayRef}`;
+    case 'setSections':   return `${op.mode === 'replace' ? 'Replace all sections' : 'Add sections'} — ${dayRef}`;
+    case 'updateSection': return `Update "${op.match}" — ${dayRef}`;
+    case 'removeSection': return `Remove "${op.match}" — ${dayRef}`;
+    case 'addDay':        return 'Add new day';
+    case 'deleteDay':     return `Delete day ${op.day}`;
+    default:              return op.op;
+  }
+}
+
+function OpCard({ op }) {
+  const sections = op.op === 'updateSection'
+    ? (op.section ? [{ type: op.section.type || 'section', title: op.section.title || op.match, data: op.section.data }] : [])
+    : (op.sections || []);
   return (
-    <>
-      {repairNote && <div class="isb-repair-note">{repairNote}</div>}
-      {draft.meta && Object.keys(draft.meta).length > 0 && (
+    <div class="isb-op">
+      <div class="isb-op-head">{opLabel(op)}</div>
+      {op.meta && (
         <div class="isb-card">
           <div class="isb-card-head">
             <span class="isb-card-title">Header</span>
             <span class="isb-card-type">meta</span>
           </div>
-          <MetaRows meta={draft.meta} />
+          <MetaRows meta={op.meta} />
         </div>
       )}
-      {(draft.sections || []).map((sec, si) => (
-        <SectionCard key={si} sec={sec} si={si} />
-      ))}
+      {sections.map((sec, si) => <SectionCard key={si} sec={sec} />)}
+    </div>
+  );
+}
+
+function VerifyStep({ draft, repairNote }) {
+  if (!draft || (!draft.ops?.length && draft.memory == null && !draft.note)) {
+    return <p class="isb-empty">No changes proposed.</p>;
+  }
+  return (
+    <>
+      {repairNote && <div class="isb-repair-note">{repairNote}</div>}
+      {draft.note && <p class="isb-lede">{draft.note}</p>}
+      {!draft.ops?.length && (
+        <p class="isb-empty">
+          {draft.memory != null
+            ? 'No sheet changes — Claude noted this input for later. Publish to keep the updated memory.'
+            : 'No sheet changes.'}
+        </p>
+      )}
+      {(draft.ops || []).map((op, i) => <OpCard key={i} op={op} />)}
+      {draft.memory != null && (
+        <p class="isb-memory-flag">✦ Intake memory will be updated on publish.</p>
+      )}
     </>
   );
 }

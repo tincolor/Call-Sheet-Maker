@@ -19,7 +19,7 @@ const ACCENT_COLOURS = {
 const DARK_TEXT_ACCENTS = new Set(['green']);
 
 export function applyTweaks() {
-  document.body.classList.add('hide-jp'); // JP labels always hidden
+  document.body.classList.toggle('hide-jp', !app.store.tweaks.showJp);
   document.body.classList.toggle('hide-logo', !app.store.tweaks.showLogo);
   document.body.classList.toggle('dark-mode', !!app.store.tweaks.darkMode);
 

@@ -53,15 +53,21 @@ mainLocation,City / Country
 date,2026.04.28 (TUE)
 day,1
 shootCall,07:00
+headerNote,
 emergency,Producer Name — +1 555 555 5555
 weatherCallout,PARTLY CLOUDY · 64° / 45°F
 sunrise,5:47
 sunset,7:40
+crewRole,Producer: Jane Doe
+crewRole,Director: John Smith
+crewRole,DOP: Ken Watanabe
 ```
 
 - Always include all META keys, even if value is blank.
 - Company defaults to **Street Attack Japan K.K.** and address to **2-13 Akasaka 9-chome, Minato-ku, Tokyo 107-0052** unless Tom specifies otherwise.
 - `day` is the shoot day number (integer).
+- `headerNote` is a short free-text note shown under the shoot call time (often blank).
+- `crewRole` is repeatable — one line per header crew role, value formatted `Role: Name(s)`. These render in the header crew block (typically Producer, Director, DOP and similar key roles). Order is preserved.
 
 ### Section Types
 
@@ -223,10 +229,14 @@ mainLocation,City / Country
 date,2026.04.28 (TUE)
 day,1
 shootCall,07:00
+headerNote,
 emergency,Producer Name — +1 555 555 5555
 weatherCallout,PARTLY CLOUDY · 64° / 45°F
 sunrise,5:47
 sunset,7:40
+crewRole,Producer: Jane Doe
+crewRole,Director: John Smith
+crewRole,DOP: Ken Watanabe
 
 # SCHEDULE · Schedule
 type,time,dur,task,loc,cast,note

@@ -73,10 +73,11 @@ export function load() {
       const s = JSON.parse(raw);
       if (s && s.days && s.currentDayId) {
         s.days.forEach(fixupLogos);
-        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4', accentColor: 'red', darkMode: false };
+        if (!s.tweaks) s.tweaks = { showLogo: true, paperSize: 'a4', accentColor: 'red', darkMode: false, showJp: false };
         if (!('paperSize' in s.tweaks)) s.tweaks.paperSize = 'a4';
         if (!('accentColor' in s.tweaks)) s.tweaks.accentColor = 'red';
         if (!('darkMode' in s.tweaks)) s.tweaks.darkMode = false;
+        if (!('showJp' in s.tweaks)) s.tweaks.showJp = false;
         return s;
       }
     }
@@ -98,8 +99,13 @@ export function save() {
   setStatus('saving…');
   commit();
   saveTimer = setTimeout(() => {
-    localStorage.setItem(CS_KEY, JSON.stringify(app.store));
-    setStatus('saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+    try {
+      localStorage.setItem(CS_KEY, JSON.stringify(app.store));
+      setStatus('saved · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+    } catch (e) {
+      console.warn('save failed', e);
+      setStatus('⚠ not saved — storage full (large logos?)');
+    }
   }, 250);
 }
 

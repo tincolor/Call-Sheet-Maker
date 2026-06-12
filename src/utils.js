@@ -23,40 +23,6 @@ export function textToHTML(text) {
   return safe.replace(/\n/g, '<br>');
 }
 
-export function getEditableText(el, multiline = false) {
-  return multiline ? htmlToText(el.innerHTML) : el.textContent;
-}
-
-export function setEditableText(el, value, multiline = false) {
-  if (multiline) el.innerHTML = textToHTML(value);
-  else el.textContent = value || '';
-}
-
-export function insertLineBreak() {
-  const sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-  range.deleteContents();
-  const br = document.createElement('br');
-  range.insertNode(br);
-  range.setStartAfter(br);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
-
-export function wireMultilineEditing(el) {
-  if (el.dataset.multilineWired) return;
-  el.dataset.multilineWired = '1';
-  el.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      insertLineBreak();
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
-}
-
 export function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
