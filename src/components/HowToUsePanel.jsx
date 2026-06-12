@@ -49,6 +49,7 @@ export function HowToUsePanel() {
             <p>
               Make call sheets the easy way. Use Claude to make sense of all the info that needs to go into a call sheet. It doesn't matter if it's in a long group chat, spread over multiple emails, or if it's in your head. Feed all that data to Claude and it will automatically put it into the call sheet for you. And if Claude makes a mistake, or if you want to adjust something, you can do that too. Or if you hate AI and want to do it all yourself, you can do that, too!
             </p>
+            <p>All data is stored locally on your computer only, including everything in the call sheet itself and your Claude API key.</p>
             <p><strong>Note:</strong> This works best in Chrome.</p>
           </div>
 
@@ -163,7 +164,7 @@ export function HowToUsePanel() {
 
               <div class="how-to-use-function-item">
                 <div class="how-to-use-function-name">Page Breaks</div>
-                <div class="how-to-use-function-desc">Hover between sections (or use the ⤓ button on a schedule row) to force a section or row to start on a new printed page.</div>
+                <div class="how-to-use-function-desc">Hover between sections (or use the <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="m16 16-4 4-4-4"/><path d="M3 12h18"/><path d="m8 8 4-4 4 4"/></svg> button on a schedule row) to force a section or row to start on a new printed page.</div>
               </div>
 
               <div class="how-to-use-function-item">
