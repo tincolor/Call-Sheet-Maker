@@ -77,7 +77,7 @@ export function HowToUsePanel() {
                   Method B: Let Claude Do It
                 </h5>
                 <p>
-                  Open the <strong>Intake</strong> panel on the left and paste raw text (WhatsApp/Slack chats, emails, Excel exports, outline notes). Claude will automatically structure and organize the data. Review the changes, then click <strong>Publish to Sheet</strong> to apply.
+                  Open the <strong>Intake</strong> panel on the left and paste raw text (WhatsApp/Slack chats, emails, Excel exports, outline notes) — or just tell Claude what to change ("add a second day", "remove the equipment list"). Claude remembers earlier pastes, so you can feed it an ongoing conversation in installments. Review the proposed changes, then click <strong>Publish to Sheet</strong> to apply.
                 </p>
               </div>
             </div>
@@ -108,7 +108,7 @@ export function HowToUsePanel() {
               <li>Visit the <a href="https://console.anthropic.com/" target="_blank" rel="noopener">Anthropic Developer Console</a> and sign up or log in.</li>
               <li>Navigate to the <strong>API Keys</strong> section.</li>
               <li>Click <strong>Create Key</strong>, name it, and copy the key string (starts with <code>sk-ant-</code>).</li>
-              <li>In the Intake sidebar, expand the <strong>Claude API key</strong> block, paste your key, select <strong>Sonnet 4.5</strong> or <strong>Haiku 4.5</strong>, and click <strong>Save</strong>.</li>
+              <li>In the Intake sidebar, expand the <strong>Claude API key</strong> block, paste your key, select <strong>Sonnet 4.6</strong> or <strong>Haiku 4.5</strong>, and click <strong>Save</strong>.</li>
             </ol>
             <p style="font-size:11px;color:var(--ink-3);margin-top:4px;">
               Your key is saved locally in this browser only, so no one can see your data or use your API key. Usage will be billed to your Anthropic developer account.
@@ -143,7 +143,7 @@ export function HowToUsePanel() {
 
               <div class="how-to-use-function-item">
                 <div class="how-to-use-function-name">Delete Day</div>
-                <div class="how-to-use-function-desc">Removes the currently visible shoot day from your database.</div>
+                <div class="how-to-use-function-desc">Removes the currently visible shoot day.</div>
               </div>
 
               <div class="how-to-use-function-item">
@@ -158,7 +158,12 @@ export function HowToUsePanel() {
 
               <div class="how-to-use-function-item">
                 <div class="how-to-use-function-name">Options</div>
-                <div class="how-to-use-function-desc">Toggles paper dimensions (US Letter vs. A4) and toggles the header logo display.</div>
+                <div class="how-to-use-function-desc">Dark mode, paper size (A4 vs. US Letter), header logo display, accent color, and Japanese labels.</div>
+              </div>
+
+              <div class="how-to-use-function-item">
+                <div class="how-to-use-function-name">Page Breaks</div>
+                <div class="how-to-use-function-desc">Hover between sections (or use the ⤓ button on a schedule row) to force a section or row to start on a new printed page.</div>
               </div>
 
               <div class="how-to-use-function-item">

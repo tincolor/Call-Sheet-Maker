@@ -18,6 +18,7 @@ export function TweaksPanel() {
   const showLogo = !!store.tweaks?.showLogo;
   const accentColor = store.tweaks?.accentColor || 'red';
   const darkMode = !!store.tweaks?.darkMode;
+  const showJp = !!store.tweaks?.showJp;
 
   const setPaperSize = (size) => {
     app.store.tweaks.paperSize = size;
@@ -26,6 +27,11 @@ export function TweaksPanel() {
 
   const toggleLogo = () => {
     app.store.tweaks.showLogo = !app.store.tweaks.showLogo;
+    save(); applyTweaks();
+  };
+
+  const toggleJp = () => {
+    app.store.tweaks.showJp = !app.store.tweaks.showJp;
     save(); applyTweaks();
   };
 
@@ -64,6 +70,10 @@ export function TweaksPanel() {
       <div class="row">
         <label>Logo slot</label>
         <button class={`toggle${showLogo ? ' on' : ''}`} onClick={toggleLogo}></button>
+      </div>
+      <div class="row">
+        <label>Japanese labels</label>
+        <button class={`toggle${showJp ? ' on' : ''}`} onClick={toggleJp}></button>
       </div>
       <div class="row">
         <label>Color</label>

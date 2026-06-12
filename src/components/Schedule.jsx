@@ -1,10 +1,8 @@
-import { useRef } from 'preact/hooks';
 import { ContentEditable } from './ContentEditable.jsx';
 import { save } from '../store.js';
 import { storeSignal } from '../signals.js';
 import { confirmDel } from '../utils.js';
 import { recalculateScheduleTimes, togglePageBreakRow } from '../render/schedule.js';
-import { drag } from '../render/drag.js';
 
 export function Schedule({
   sec,
@@ -106,54 +104,6 @@ export function Schedule({
 }
 
 function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
-  const trRef = useRef(null);
-
-  const handleMouseDown = () => {
-    if (trRef.current) trRef.current.draggable = true;
-  };
-
-  const handleDragStart = (e) => {
-    if (!trRef.current.draggable) {
-      e.preventDefault();
-      return;
-    }
-    drag.current = { type: 'row', secId: sec.id, idx: gi };
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(gi));
-    trRef.current.classList.add('dragging');
-  };
-
-  const handleDragEnd = () => {
-    if (trRef.current) {
-      trRef.current.draggable = false;
-      trRef.current.classList.remove('dragging');
-    }
-    document.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
-  };
-
-  const handleDragOver = (e) => {
-    if (drag.current?.type !== 'row' || drag.current.secId !== sec.id) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
-    trRef.current.classList.add('drag-over');
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (trRef.current) trRef.current.classList.remove('drag-over');
-    if (!drag.current || drag.current.type !== 'row' || drag.current.secId !== sec.id) return;
-    const f2 = drag.current.idx;
-    const t2 = gi;
-    drag.current = null;
-    if (f2 === t2) return;
-
-    const [mv] = sec.data.splice(f2, 1);
-    sec.data.splice(t2, 0, mv);
-    recalculateScheduleTimes(sec, Math.min(f2, t2));
-    save();
-  };
-
   const rc = (
     <div class="row-controls">
 <button onClick={() => handleRowAction('up', gi)}>↑</button>
@@ -171,15 +121,7 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
 
   if (row.type === 'span') {
     return (
-      <tr
-        ref={trRef}
-        class="span"
-        data-row-idx={gi}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
+      <tr class="span" data-row-idx={gi}>
         <td class="time">
           {rc}
           <ContentEditable
@@ -209,14 +151,7 @@ function ScheduleRow({ row, gi, sec, handleCellChange, handleRowAction }) {
   }
 
   return (
-    <tr
-      ref={trRef}
-      data-row-idx={gi}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
+    <tr data-row-idx={gi}>
       <td class="time">
         {rc}
         <ContentEditable

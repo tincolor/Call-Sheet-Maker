@@ -1,41 +1,24 @@
-import { useLayoutEffect } from 'preact/hooks';
 import { storeSignal } from '../signals.js';
 import { save } from '../store.js';
-import { MULTILINE_META_KEYS } from '../constants.js';
-import { esc, setEditableText, getEditableText, wireMultilineEditing, confirmDel } from '../utils.js';
+import { confirmDel } from '../utils.js';
 
-export function Header() {
-  const store = storeSignal.value;
-  const state = store?.days?.find(d => d.id === store.currentDayId) || store?.days[0];
-
-  useLayoutEffect(() => {
-    if (!state || !state.meta) return;
-
-    document.querySelectorAll('[data-k]').forEach(el => {
-      const k = el.dataset.k;
-      const v = state.meta[k];
-      const multiline = MULTILINE_META_KEYS.has(k);
-
-      // Only update DOM if the user is not currently editing the field
-      if (document.activeElement !== el) {
-        setEditableText(el, v ?? '', multiline);
-        if (multiline) wireMultilineEditing(el);
-      }
-
-      if (el.dataset.wired) return;
-      el.dataset.wired = '1';
-
-      const commitChange = () => {
-        state.meta[k] = getEditableText(el, multiline);
-        save();
-      };
-
-      el.addEventListener('input', commitChange);
-      el.addEventListener('blur', commitChange);
-    });
-  }, [state]);
-
-  return null;
+// Logos are stored as data URLs in localStorage (~5MB quota); cap the longest
+// edge so a phone photo can't blow the budget. PNG preserves transparency.
+function downscaleImage(dataUrl, maxEdge) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = maxEdge / Math.max(img.width, img.height);
+      if (scale >= 1) { resolve(dataUrl); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
 }
 
 export function Logos() {
@@ -57,8 +40,10 @@ export function Logos() {
         if (!f) return;
         const fr = new FileReader();
         fr.onload = () => {
-          state.logos[idx].dataUrl = fr.result;
-          save();
+          downscaleImage(fr.result, 1000).then(dataUrl => {
+            state.logos[idx].dataUrl = dataUrl;
+            save();
+          });
         };
         fr.readAsDataURL(f);
       };

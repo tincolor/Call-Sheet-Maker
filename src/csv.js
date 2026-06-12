@@ -1,6 +1,5 @@
-import { app, save } from './store.js';
-import { confirmPopover, uid, esc } from './utils.js';
-import { DEFAULT_DAY } from './data.js';
+import { app, save, normalizeMultilineFields } from './store.js';
+import { confirmPopover, uid } from './utils.js';
 import { renderSheet } from './render/sheet.js';
 
 export function csvEscape(s) {
@@ -11,7 +10,14 @@ export function csvEscape(s) {
 export function dayToCSVLines(day) {
   const lines = [];
   lines.push('# META'); lines.push('key,value');
-  Object.entries(day.meta).forEach(([k, v]) => lines.push(`${csvEscape(k)},${csvEscape(v)}`));
+  Object.entries(day.meta).forEach(([k, v]) => {
+    if (k === 'crewRoles' || k.startsWith('crew.')) return;
+    lines.push(`${csvEscape(k)},${csvEscape(v)}`);
+  });
+  // one line per crew role: crewRole,"Role: Names"
+  (Array.isArray(day.meta.crewRoles) ? day.meta.crewRoles : []).forEach(({ role, names }) => {
+    lines.push(`crewRole,${csvEscape(`${role || ''}: ${names || ''}`)}`);
+  });
   lines.push('');
   day.sections.forEach(sec => {
     lines.push(`# ${sec.type.toUpperCase()} · ${sec.title}`);
@@ -88,16 +94,18 @@ export function importCSV(anchor) {
         const fresh = drafts.map(d => ({
           id: uid(),
           meta: d.meta || {},
-          logos: DEFAULT_DAY().logos,
+          logos: (app.state?.logos || []).map(l => ({ ...l })),
           pageBreaks: [],
           sections: (d.sections || []).map(s => ({ ...s, id: uid() })),
         }));
+        fresh.forEach(normalizeMultilineFields);
 
         if (replace) {
           // Overwrite the current day in-place
           const cur = app.state;
           cur.meta = fresh[0].meta;
           cur.sections = fresh[0].sections;
+          cur.pageBreaks = [];
           // If multi-day, append the remaining days as new
           if (fresh.length > 1) {
             app.store.days.push(...fresh.slice(1));
@@ -182,7 +190,18 @@ export function parseCSVtoDrafts(txt) {
     }
     if (mode === 'meta') {
       if (r[0] === 'key' && r[1] === 'value') continue;
-      ensureDraft().meta[r[0]] = r[1];
+      const d = ensureDraft();
+      if (r[0] === 'crewRole') {
+        // crewRole,"Role: Names" — repeatable, order preserved
+        const [role, ...rest] = String(r[1] || '').split(':');
+        if (!Array.isArray(d.meta.crewRoles)) d.meta.crewRoles = [];
+        d.meta.crewRoles.push({ id: uid(), role: role.trim(), names: rest.join(':').trim() });
+      } else if (r[0] === 'crewRoles') {
+        // legacy broken exports serialized the array as "[object Object],…" — drop it
+        // so normalizeCrewRoles can rebuild from the crew.* keys instead
+      } else {
+        d.meta[r[0]] = r[1];
+      }
     } else if (mode === 'sec' && cur) {
       if (!header) { header = r; continue; }
       if (Array.isArray(cur.data)) {
@@ -196,10 +215,4 @@ export function parseCSVtoDrafts(txt) {
     }
   }
   return drafts;
-}
-
-// Legacy single-draft shim (still used by any callers)
-export function parseCSVtoDraft(txt) {
-  const drafts = parseCSVtoDrafts(txt);
-  return drafts[0] || { meta: {}, sections: [] };
 }

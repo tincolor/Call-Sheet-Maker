@@ -10,11 +10,3 @@ export async function deleteDay(anchor) {
   app.store.currentDayId = app.store.days[Math.max(0, i - 1)].id;
   save();
 }
-
-export function renameDay() {
-  const cur = app.state.meta?.date || '';
-  const next = prompt('Day label (date or short name):', cur);
-  if (next == null) return;
-  app.state.meta.date = next;
-  save();
-}

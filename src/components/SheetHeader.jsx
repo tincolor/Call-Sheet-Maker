@@ -78,7 +78,7 @@ export function SheetHeader() {
 }
 
 function HeaderCrewRoles({ state }) {
-  if (!state.meta.crewRoles) state.meta.crewRoles = [];
+  if (!Array.isArray(state.meta.crewRoles)) state.meta.crewRoles = [];
 
   const focusRole = (id) => {
     requestAnimationFrame(() => {
